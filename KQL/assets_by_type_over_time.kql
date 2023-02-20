@@ -1,0 +1,4 @@
+let workspace = '';
+EasmAsset
+|where WorkspaceName == workspace
+|summarize Count=count() by AssetType,SnapshotDateTime

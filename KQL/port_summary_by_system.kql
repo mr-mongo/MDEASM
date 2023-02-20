@@ -1,0 +1,33 @@
+let workspace = '';
+union isfuzzy=true (
+    EasmHostAsset
+	|where WorkspaceName == workspace
+    |where AssetLastSeen > ago(60d)
+    |where array_length(Ports) > 0
+    |extend System = Host
+    |extend Source = 'EasmHostAsset'
+    |mv-expand Ports
+    |extend Port = toint(Ports.Port)
+    |extend LastPortState = Ports.LastPortState
+    |extend PortLastSeen = todatetime(Ports.PortStateLastSeen)
+    |where PortLastSeen > ago(60d)
+    |project System,Port,LastPortState,Source
+    ),
+    (
+    EasmIpAddressAsset
+	|where WorkspaceName == workspace
+    |where AssetLastSeen > ago(60d)
+    |where array_length(Ports) > 0
+    |extend System = IpAddress
+    |extend Source = 'EasmIpAddressAsset'
+    |mv-expand Ports
+    |extend Port = toint(Ports.Port)
+    |extend LastPortState = Ports.LastPortState
+    |extend PortLastSeen = todatetime(Ports.PortStateLastSeen)
+    |where PortLastSeen > ago(60d)
+    |project System,Port,LastPortState,Source
+    )
+//|project System,Port,LastPortState,Source
+|sort by System
+//|summarize AllPorts = make_set(Port) by System
+|summarize AllSystems = make_set(System) by Port

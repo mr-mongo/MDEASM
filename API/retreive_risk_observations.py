@@ -1,7 +1,12 @@
 #!/usr/bin/python3
+import sys
 
 #easiest to import mdeasm.py if it is in the same directory as this retreive_risk_observations.py script
+#requires mdeasm.py VERSION 1.2
 import mdeasm
+
+if mdeasm._VERSION < 1.2:
+    sys.exit(f"requires mdeasm.py VERSION 1.2; current version: {mdeasm._VERSION}")
 
 # name of the EASM resource
 workspace_name = ''

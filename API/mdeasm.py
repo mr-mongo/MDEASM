@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-_VERSION = 1.1
+_VERSION = 1.2
 # Created by Josh Randall
 # jorandall@microsoft.com
 # 
@@ -10,10 +10,18 @@ _VERSION = 1.1
 #   added create_facet_filter support for when attribute_value is itself a list of dicts
 #   added deduping for create_facet_filter output
 #   changed self._state_map from dict to --> requests.structures.CaseInsensitiveDict()
-#   added get_asset_summaries
+#   added get_workspace_asset_summaries
 #   added default option to auto-create facet filters
 #       also made facet filters a class object, so asset filters are now object attributes
 #   added csv and json file output options for query_facet_filter()
+#
+# version 1.2, FEB 2023
+#   added get_workspace_risk_observations() for retrieving asset details for high,medium,low observations
+#       reports/assets:summarize --> reports/assets:snapshot --> /assets
+#   adjusted evaluation of date_range_start
+#       any asset details where 'lastSeen' is AFTER the supplied date will be included
+#   adjusted evaluation of date_range_end
+#       any asset details where 'lastSeen' is BEFORE the supplied date will be included
 #
 # TODO 
 #   create/update azure resource tags
@@ -660,9 +668,11 @@ class Workspaces:
         
         last_seen_days_back determines whether to keep asset details which have a 'lastSeen' value and where that value is within the past <last_seen_days_back>; defaults to last 30 days
         
-        if date_range_start or date_range_end are submitted as standalone arguments (one without the other), each will be evaluated the same -- whether the date falls between the 'firstSeen' and 'lastSeen' values (if they exist); default to None (AKA will not evaluate)
+        if date_range_start ('YYYY-MM-DD') is submitted without date_range_end, any asset details where 'lastSeen' is AFTER the supplied date will be included
         
-        if both date_range_start and date_range_end are submitted, they will be evaluated together -- whether date_range_start is LATER THAN 'firstSeen' and date_range_end is EARLIER THAN 'lastSeen' -- and prevent any standalone date_range_start or date_range_end evaluation
+        if date_range_end ('YYYY-MM-DD') is submitted without date_range_start, any asset details where 'lastSeen' is BEFORE the supplied date will be included
+        
+        if both date_range_start and date_range_end are submitted, any asset details that are seen, they will be evaluated together -- whether date_range_start is LATER THAN 'firstSeen' and date_range_end is EARLIER THAN 'lastSeen' -- and prevent any standalone date_range_start or date_range_end evaluation
         """
         if not workspace_name:
             workspace_name = self._default_workspace_name
@@ -756,9 +766,11 @@ class Workspaces:
         
         last_seen_days_back determines whether to keep asset details which have a 'lastSeen' value and where that value is within the past <last_seen_days_back>; defaults to last 30 days
         
-        if date_range_start or date_range_end are submitted as standalone arguments (one without the other), each will be evaluated the same -- whether the date falls between the 'firstSeen' and 'lastSeen' values (if they exist); default to None (AKA will not evaluate)
+        if date_range_start ('YYYY-MM-DD') is submitted without date_range_end, any asset details where 'lastSeen' is AFTER the supplied date will be included
         
-        if both date_range_start and date_range_end are submitted, they will be evaluated together -- whether date_range_start is LATER THAN 'firstSeen' and date_range_end is EARLIER THAN 'lastSeen' -- and prevent any standalone date_range_start or date_range_end evaluation
+        if date_range_end ('YYYY-MM-DD') is submitted without date_range_start, any asset details where 'lastSeen' is BEFORE the supplied date will be included
+        
+        if both date_range_start and date_range_end are submitted, any asset details that are seen, they will be evaluated together -- whether date_range_start is LATER THAN 'firstSeen' and date_range_end is EARLIER THAN 'lastSeen' -- and prevent any standalone date_range_start or date_range_end evaluation
         """
         if not workspace_name:
             workspace_name = self._default_workspace_name
@@ -779,50 +791,118 @@ class Workspaces:
             logging.error(f"{workspace_name} not found")
             raise Exception(workspace_name)
 
-    def get_workspace_asset_summaries(self, query_filter_list=[], metric_categories_list=[], metrics_list=[], group_by='', workspace_name=''):
+    def get_workspace_risk_observations(self, severity='', last_seen_days_back=30, date_range_start='', date_range_end='', workspace_name=''):
+        """if supplied, optional argument severity must be one of (case-insensitive) 'high','medium', or 'low'. if not supplied, retreives risk observations for all severities
+        
+        last_seen_days_back will by default only keep asset details seen within the past N days. this can be adjusted to longer or shorter time ranges to suit.
+        
+        if date_range_start ('YYYY-MM-DD') is submitted without date_range_end, any asset details where 'lastSeen' is AFTER the supplied date will be included
+        
+        if date_range_end ('YYYY-MM-DD') is submitted without date_range_start, any asset details where 'lastSeen' is BEFORE the supplied date will be included
+        
+        if both date_range_start and date_range_end are submitted, any asset details that are seen, they will be evaluated together -- whether date_range_start is LATER THAN 'firstSeen' and date_range_end is EARLIER THAN 'lastSeen' -- and prevent any standalone date_range_start or date_range_end evaluation
+        """
+        if not workspace_name:
+            workspace_name = self._default_workspace_name
+        if self.__verify_workspace__(workspace_name):
+            if severity.lower() == 'high':
+                metric_categories = ['priority_high_severity']
+            elif severity.lower() == 'medium':
+                metric_categories = ['priority_medium_severity']
+            elif severity.lower() == 'low':
+                metric_categories = ['priority_low_severity']
+            else:
+                logging.warning(f"supplied value of severity='{severity}' not one of 'high','medium','low'; defaulting to all severities")
+                severity='high & medium & low'
+                metric_categories = ['priority_high_severity','priority_medium_severity','priority_low_severity']
+            
+            summarize_payload = {'metricCategories': metric_categories, 'metrics': None, 'filters': None, 'groupBy': None}
+            r_summarize = self.__workspace_query_helper__('get_workspace_risk_observations', method='post', endpoint='reports/assets:summarize', payload=summarize_payload)
+            
+            metrics = {}
+            for summary in r_summarize.json()['assetSummaries']:
+                sev_type = summary['displayName']
+                if summary['count']:
+                    for observation in summary['children']:
+                        if observation['count']:
+                            finding = f"{sev_type}_{observation['displayName']}"
+                            finding = re.sub(r'[^\w]', '_', finding)
+                            metrics[finding] = observation['metric']
+            
+            if not metrics:
+                print(f"No Risk Observations found for severity='{severity}'")
+            else:
+                snapshot_assets = {}
+                for key,val in metrics.items():
+                    snapshot_payload = {'metric':val,'labelName':None,'page':0,'size':100}
+                    asset_uuids = []
+                    get_next = True
+                    while get_next:
+                        r_snapshot = self.__workspace_query_helper__('get_workspace_risk_observations', method='post', endpoint='reports/assets:snapshot', payload=snapshot_payload)
+                        for asset in r_snapshot.json()['assets']['content']:
+                            asset_uuids.append(asset['uuid'])
+                        if r_snapshot.json()['assets']['last']:
+                            get_next = False
+                        else:
+                            snapshot_payload['page'] += 1
+                    snapshot_assets[key] = asset_uuids
+            
+            for key,val in snapshot_assets.items():
+                for i in range(0, len(val), 50):
+                    uuid_list = []
+                    for uuid in val[i:i+50]:
+                        uuid_list.append(uuid)
+                    uuid_str = '","'.join(uuid_list)
+                    query = f"uuid in (\"{uuid_str}\")"
+                    self.get_workspace_assets(query_filter=query, asset_list_name=key, max_page_size=50, auto_create_facet_filters=False, last_seen_days_back=last_seen_days_back, date_range_start=date_range_start, date_range_end=date_range_end)
+                self.create_facet_filter(asset_list_name=key)
+                print(f"{key} risk observations retrieved for {len(val)} assets and available at <mdeasm.Workspaces object>.{key}.assets\n")
+            print(f"facet filters created and available at <mdeasm.Workspaces object>.filters.<facet_filter>")
+
+    def get_workspace_asset_summaries(self, query_filters=[], metric_categories=[], metrics=[], group_by='', workspace_name=''):
         """submit one of:
         
-                query_filter_list: must be a valid EASM query
+                query_filters: must be a valid EASM query
             
-                metric_categories_list: expects one of <mdeasm.Workspaces object>._metric_categories
+                metric_categories: expects one of <mdeasm.Workspaces object>._metric_categories
             
-                metrics_list: expects one of <mdeasm.Workspaces object>._metrics
+                metrics: expects one of <mdeasm.Workspaces object>._metrics
             
             details are accessible through the <mdeasm.Workspaces object>.asset_summaries attribute; also prints <mdeasm.Workspaces object>.asset_summaries upon completion
         """
  
-        if (not query_filter_list and not metric_categories_list and not metrics_list) or (query_filter_list and metric_categories_list and metrics_list) or (query_filter_list and metric_categories_list and not metrics_list) or (query_filter_list and not metric_categories_list and metrics_list) or (not query_filter_list and metric_categories_list and metrics_list):
-            logging.error('must submit one and only one of: query_filter_list, metric_categories_list, metrics_list')
-            raise Exception(f"query_filter_list: {query_filter_list}; metric_categories_list: {metric_categories_list}; metrics_list: {metrics_list}")
+        if (not query_filters and not metric_categories and not metrics) or (query_filters and metric_categories and metrics) or (query_filters and metric_categories and not metrics) or (query_filters and not metric_categories and metrics) or (not query_filters and metric_categories and metrics):
+            logging.error('must submit one and only one of: query_filters, metric_categories, metrics')
+            raise Exception(f"query_filters: {query_filters}; metric_categories: {metric_categories}; metrics: {metrics}")
 
-        if query_filter_list and isinstance(query_filter_list, str):
-            query_filter_list = [query_filter_list]
-            logging.debug(query_filter_list)
-        if query_filter_list and not isinstance(query_filter_list, list):
-            logging.error(f"invalid query_filter_list; must be a list of valid EASM queries")
-            raise Exception(type(query_filter_list), query_filter_list)
+        if query_filters and isinstance(query_filters, str):
+            query_filters = [query_filters]
+            logging.debug(query_filters)
+        if query_filters and not isinstance(query_filters, list):
+            logging.error(f"invalid query_filters; must be a list of valid EASM queries")
+            raise Exception(type(query_filters), query_filters)
 
-        if metric_categories_list and isinstance(metric_categories_list, str):
-            metric_categories_list = [metric_categories_list]
-            logging.debug(metric_categories_list)
-        if metric_categories_list and (not isinstance(metric_categories_list, list) or not all(met_cat in self._metric_categories for met_cat in metric_categories_list)):
-            logging.error(f"invalid metric_categories_list; must be a list and items be one of {self._metric_categories}")
-            raise Exception(metric_categories_list)
+        if metric_categories and isinstance(metric_categories, str):
+            metric_categories = [metric_categories]
+            logging.debug(metric_categories)
+        if metric_categories and (not isinstance(metric_categories, list) or not all(met_cat in self._metric_categories for met_cat in metric_categories)):
+            logging.error(f"invalid metric_categories; must be a list and items be one of {self._metric_categories}")
+            raise Exception(metric_categories)
 
-        if metrics_list and isinstance(metrics_list, str):
-            metrics_list = [metrics_list]
-            logging.debug(metric_categories_list)
-        if metrics_list and (not isinstance(metrics_list, list) or not all(met in self._metrics for met in metrics_list)):
-            logging.error(f"invalid metrics_list; must be a list and items be one of {self._metrics}")
-            raise Exception(metrics_list)
+        if metrics and isinstance(metrics, str):
+            metrics = [metrics]
+            logging.debug(metric_categories)
+        if metrics and (not isinstance(metrics, list) or not all(met in self._metrics for met in metrics)):
+            logging.error(f"invalid metrics; must be a list and items be one of {self._metrics}")
+            raise Exception(metrics)
 
         if not workspace_name:
             workspace_name = self._default_workspace_name
         if self.__verify_workspace__(workspace_name):
-            payload = {'metricCategories': metric_categories_list, 'metrics': metrics_list, 'filters': query_filter_list, 'groupBy': None}
+            payload = {'metricCategories': metric_categories, 'metrics': metrics, 'filters': query_filters, 'groupBy': None}
             r = self.__workspace_query_helper__('get_workspace_asset_summaries', method='post', endpoint='reports/assets:summarize', payload=payload)
             
-            submitted = query_filter_list + metric_categories_list + metrics_list
+            submitted = query_filters + metric_categories + metrics
             if not hasattr(self, 'asset_summaries'):
                 setattr(self, 'asset_summaries', {})
             for idx,summary in enumerate(r.json()['assetSummaries']):
@@ -858,7 +938,8 @@ class Workspaces:
             self.__facet_filter_helper__(asset_id=asset_id, attribute_name=attribute_name)
 
         #print(f"facet filter created, available at <mdeasm.Workspaces object>.filters.<attribute_name>")
-        print(f"facet filter created successfully and available at <mdeasm.Workspaces object>.filters.{attribute_name}")
+        if attribute_name:
+            print(f"facet filter created successfully and available at <mdeasm.Workspaces object>.filters.{attribute_name}")
 
     def query_facet_filter(self, search, facet_filter='', search_type='contains', case_insensitive=True, sort_order='descending', out_format='print', out_path=''):
         """Expects a search string and optionally the name of an alread-created facet filter. Valid values for facet_filter can be identified via:
@@ -1124,8 +1205,8 @@ class Asset:
                                         (get_recent and 'recent' in sub_sub_val and sub_sub_val.get('recent') == True) or 
                                         ('lastSeen' in sub_sub_val and parser.parse(sub_sub_val.get('lastSeen')) >= last_seen) or 
                                         (date_range_start and date_range_end and 'firstSeen' in sub_sub_val and 'lastSeen' in sub_sub_val and date_start.astimezone(tz=datetime.timezone.utc) >= parser.parse(sub_sub_val.get('firstSeen')) and parser.parse(sub_sub_val.get('lastSeen')) >= date_end.astimezone(tz=datetime.timezone.utc)) or 
-                                        (date_range_start and not date_range_end and 'firstSeen' in sub_sub_val and 'lastSeen' in sub_sub_val and date_start.astimezone(tz=datetime.timezone.utc) >= parser.parse(sub_sub_val.get('firstSeen')) and date_start.astimezone(tz=datetime.timezone.utc) <= parser.parse(sub_sub_val.get('lastSeen'))) or 
-                                        (date_range_end and not date_range_start and 'lastSeen' in sub_sub_val and 'firstSeen' in sub_sub_val and date_end.astimezone(tz=datetime.timezone.utc) >= parser.parse(sub_sub_val.get('firstSeen')) and date_end.astimezone(tz=datetime.timezone.utc) <= parser.parse(sub_sub_val.get('lastSeen')))
+                                        (date_range_start and not date_range_end and 'lastSeen' in sub_sub_val and parser.parse(sub_sub_val.get('lastSeen')) >= date_start.astimezone(tz=datetime.timezone.utc)) or 
+                                        (date_range_end and not date_range_start and 'lastSeen' in sub_sub_val and parser.parse(sub_sub_val.get('lastSeen')) <= date_start.astimezone(tz=datetime.timezone.utc))
                                     ):
                                         new_val = {k: sub_sub_val[k] for k in set(list(sub_sub_val.keys())) - self._exclude_keys}
                                         logging.debug(f"eval True: {sub_key} + {sub_sub_val}")

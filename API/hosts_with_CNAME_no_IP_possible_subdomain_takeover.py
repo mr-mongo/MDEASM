@@ -1,5 +1,4 @@
 import mdeasm
-from dateutil import parser
 
 # name of the EASM resource
 workspace_name = ''

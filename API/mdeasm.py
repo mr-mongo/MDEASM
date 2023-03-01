@@ -26,6 +26,7 @@ _VERSION = 1.2
 #   moved create_discovery_group() dependency from __run_discovery_group__() to __workspace_query_helper__()
 #       removed __run_discovery_group__()
 #   fixed bug when __get_discovery_group_runs__() would be called without disco_name arg
+#   added asset_lists() and facet_filters() to enable easier finding of AssetList and FacetFilter objects within a mdeasm.Workspaces object
 #
 # TODO 
 #   create/update azure resource tags
@@ -1140,6 +1141,28 @@ class Workspaces:
                         print((f"task started:\n\t{task['startedAt']}"))
                         print(f"task completed:\n\t{task['completedAt']}\n")
                         self.task_ids.remove(task['id'])
+
+    def asset_lists(self):
+        asset_lists_out = []
+        for k,v in vars(self).items():
+            if isinstance(v, AssetList):
+                asset_lists_out.append(k)
+        if not asset_lists_out:
+            print('No AssetList attributes found')
+        else:
+            print(f"\n".join(asset_lists_out))
+    
+    def facet_filters(self):
+        facet_filters_out = []
+        for v in vars(self).values():
+            if isinstance(v, FacetFilter):
+                for k in vars(v).keys():
+                    facet_filters_out.append(k)
+        if not facet_filters_out:
+            print('No FacetFilter attributes found.')
+        else:
+            print(f"\n".join(facet_filters_out))
+
 
 class Asset:
     _exclude_attributes = [

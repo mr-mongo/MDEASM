@@ -11,7 +11,7 @@
 
  >easm.create_workspace(
  >  resource_group_name=<resource_group>, 
- >  location=<one of easm._locations>,
+ >  location=<oneOf---easm._locations>,
  >  workspace_name=<new_workspace_name>)
 
 ### Retrieve MDEASM Workspace Assets and Risk Findings

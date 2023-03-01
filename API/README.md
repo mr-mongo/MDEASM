@@ -55,21 +55,21 @@
 ### Interrogate Asset details
  >easm.asset_lists()
 
- > *hosts_with_cnames*
+ >> **hosts_with_cnames**
  
- > *owned_domains*
+ >> **owned_domains**
 
  >easm.facet_filters()
  
- > *kind*
+ >> **kind**
  
- > *host*
+ >> **host**
  
- > *domain*
+ >> **domain**
  
- > *headers*
+ >> **headers**
  
- > *...etc...*
+ >> **...etc...**
 
  >easm.<AssetList_name>.assets[0].to_dict()
 

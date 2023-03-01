@@ -1148,7 +1148,7 @@ class Workspaces:
             if isinstance(v, AssetList):
                 asset_lists_out.append(k)
         if not asset_lists_out:
-            print('No AssetList attributes found')
+            print('no AssetList attributes found')
         else:
             print(f"\n".join(asset_lists_out))
     
@@ -1159,7 +1159,7 @@ class Workspaces:
                 for k in vars(v).keys():
                     facet_filters_out.append(k)
         if not facet_filters_out:
-            print('No FacetFilter attributes found.')
+            print('no FacetFilter attributes found')
         else:
             print(f"\n".join(facet_filters_out))
 

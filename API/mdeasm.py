@@ -26,6 +26,7 @@ _VERSION = 1.2
 #   moved create_discovery_group() dependency from __run_discovery_group__() to __workspace_query_helper__()
 #       removed __run_discovery_group__()
 #   fixed bug when __get_discovery_group_runs__() would be called without disco_name arg
+#   added asset_lists() and facet_filters() to enable easier finding of AssetList and FacetFilter objects within a mdeasm.Workspaces object
 #
 # TODO 
 #   create/update azure resource tags

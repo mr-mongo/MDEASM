@@ -1143,6 +1143,8 @@ class Workspaces:
                         self.task_ids.remove(task['id'])
 
     def asset_lists(self):
+        """retrieves and prints the current AssetList objects available within the Workspaces object
+        """
         asset_lists_out = []
         for k,v in vars(self).items():
             if isinstance(v, AssetList):
@@ -1153,6 +1155,8 @@ class Workspaces:
             print(f"\n".join(asset_lists_out))
     
     def facet_filters(self):
+        """retreives and prints the current FacetFilter objects available within the Workspaces object 
+        """
         facet_filters_out = []
         for v in vars(self).values():
             if isinstance(v, FacetFilter):

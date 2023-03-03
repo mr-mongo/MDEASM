@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-_VERSION = 1.2
+_VERSION = 1.3
 # Created by Josh Randall
 # jorandall@microsoft.com
 # 
@@ -28,18 +28,23 @@ _VERSION = 1.2
 #   fixed bug when __get_discovery_group_runs__() would be called without disco_name arg
 #   added asset_lists() and facet_filters() to enable easier finding of AssetList and FacetFilter objects within a mdeasm.Workspaces object
 #
+# version 1.3, FEB 2023
+#   added create_or_update_label()
+#   added get_labels()
+#   adjusted update_asset_states() --> update_assets()
+#       added support for adding/removing asset labels
+#       added function summary/usage details
+#
 # TODO 
 #   create/update azure resource tags
 #   delete azure resource
-#   create/update asset labels
-#   get asset lables
-#   delete asset labels
 #   delete disco group
 #   asset snapshots
 #   create/update saved filters
 #   get saved filters
 #   delete saved filters
 #   cancel tasks
+
 
 import requests, time, urllib.parse, jwt, datetime, base64, uuid, re, binascii, logging, json, pathlib
 from dateutil import parser
@@ -50,7 +55,7 @@ logging.basicConfig(format='%(asctime)s - %(levelname)s - %(funcName)s - %(messa
 
 class Workspaces:
     _state_map = requests.structures.CaseInsensitiveDict({
-        'approved':'confirmed', 'candidate':'candidate', 'dependency':'associatedThirdparty', 'monitorOnly':'associatedPartner', 'requiresInvestigation':'candidateInvestigate', 'dismissed':'dismissed'})
+        'Approved':'confirmed', 'Candidate':'candidate', 'Dependency':'associatedThirdparty', 'MonitorOnly':'associatedPartner', 'RequiresInvestigation':'candidateInvestigate', 'Dismissed':'dismissed'})
     _locations = [
         'southcentralus','westus3','eastus','eastasia','swedencentral','australiaeast','japaneast']
     _metric_categories = [
@@ -860,60 +865,9 @@ class Workspaces:
                 self.create_facet_filter(asset_list_name=key)
                 print(f"{key} risk observations retrieved for {len(val)} assets and available at <mdeasm.Workspaces object>.{key}.assets\n")
             print(f"facet filters created and available at <mdeasm.Workspaces object>.filters.<facet_filter>")
-
-    def get_workspace_asset_summaries(self, query_filters=[], metric_categories=[], metrics=[], group_by='', workspace_name=''):
-        """submit one of:
-        
-                query_filters: must be a valid EASM query
-            
-                metric_categories: expects one of <mdeasm.Workspaces object>._metric_categories
-            
-                metrics: expects one of <mdeasm.Workspaces object>._metrics
-            
-            details are accessible through the <mdeasm.Workspaces object>.asset_summaries attribute; also prints <mdeasm.Workspaces object>.asset_summaries upon completion
-        """
- 
-        if (not query_filters and not metric_categories and not metrics) or (query_filters and metric_categories and metrics) or (query_filters and metric_categories and not metrics) or (query_filters and not metric_categories and metrics) or (not query_filters and metric_categories and metrics):
-            logging.error('must submit one and only one of: query_filters, metric_categories, metrics')
-            raise Exception(f"query_filters: {query_filters}; metric_categories: {metric_categories}; metrics: {metrics}")
-
-        if query_filters and isinstance(query_filters, str):
-            query_filters = [query_filters]
-            logging.debug(query_filters)
-        if query_filters and not isinstance(query_filters, list):
-            logging.error(f"invalid query_filters; must be a list of valid EASM queries")
-            raise Exception(type(query_filters), query_filters)
-
-        if metric_categories and isinstance(metric_categories, str):
-            metric_categories = [metric_categories]
-            logging.debug(metric_categories)
-        if metric_categories and (not isinstance(metric_categories, list) or not all(met_cat in self._metric_categories for met_cat in metric_categories)):
-            logging.error(f"invalid metric_categories; must be a list and items be one of {self._metric_categories}")
-            raise Exception(metric_categories)
-
-        if metrics and isinstance(metrics, str):
-            metrics = [metrics]
-            logging.debug(metric_categories)
-        if metrics and (not isinstance(metrics, list) or not all(met in self._metrics for met in metrics)):
-            logging.error(f"invalid metrics; must be a list and items be one of {self._metrics}")
-            raise Exception(metrics)
-
-        if not workspace_name:
-            workspace_name = self._default_workspace_name
-        if self.__verify_workspace__(workspace_name):
-            payload = {'metricCategories': metric_categories, 'metrics': metrics, 'filters': query_filters, 'groupBy': None}
-            r = self.__workspace_query_helper__('get_workspace_asset_summaries', method='post', endpoint='reports/assets:summarize', payload=payload)
-            
-            submitted = query_filters + metric_categories + metrics
-            if not hasattr(self, 'asset_summaries'):
-                setattr(self, 'asset_summaries', {})
-            for idx,summary in enumerate(r.json()['assetSummaries']):
-                if (submitted[idx] == summary['metricCategory']) or (submitted[idx] == summary['metric']) or (submitted[idx] == summary['filter']):
-                    self.asset_summaries[submitted[idx]] = {'count':summary['count'], 'updatedAt':summary['updatedAt']}
-                else:
-                    logging.warning(f"{submitted[idx]} NOT EQUAL to any of {summary['metricCategory']}, {summary['metric']}, {summary['filter']}")
-            
-            print(json.dumps(self.asset_summaries, indent=2))
+        else:
+            logging.error(f"{workspace_name} not found")
+            raise Exception(workspace_name)
 
     def create_facet_filter(self, asset_list_name='', asset_id='', attribute_name=''):
         """Expects an asset_list_name created by get_workspace_assets() or an asset_id created by get_workspace_asset_by_id().
@@ -1069,19 +1023,108 @@ class Workspaces:
                             pass
         return(out_dict)
 
-    def update_asset_state(self, new_state, query_filter, workspace_name=''):
-        if new_state not in self._state_map.values():
-            logging.error(f"new_state not a valid value: {new_state}; must be one of {', '.join([v for v in self._state_map.values()])}")
-            raise Exception(f"new_state: {new_state}")
+    def create_or_update_label(self, name, color='', display_name='', workspace_name='', **kwargs):
+        """submitting the 'name' of an already-created label will update it to whatever are submitted for 'color' and 'displayName'
+        
+        optional arg 'color' must be one of red,green,blue,purple,brown,gray,yellow. submitting anything else (or omitting) will default to 'blue'
+        
+        if optional arg 'display_name' is not submitted, it will default to the same as 'name'
+        """
+        if color and color not in ('red','green','blue','purple','brown','gray','yellow'):
+            logging.warning(f"{color} not one of red,green,blue,purple,brown,gray,yellow; setting to default")
+            color = 'blue'
+        elif not color:
+            color = 'blue'
+        if not display_name:
+            display_name = name
         if not workspace_name:
             workspace_name = self._default_workspace_name
         if self.__verify_workspace__(workspace_name):
+            tmp_path = self._workspaces[workspace_name].replace('eastus.easm.defender.microsoft.com','')
+            tmp_index = self._workspaces[workspace_name].replace('eastus.easm.defender.microsoft.com','').find('/workspaces/')
+            label_path = tmp_path[:tmp_index] + '/providers/Microsoft.Easm' + tmp_path[tmp_index:]
+            label_url = f"https://management.azure.com{label_path}"
+            label_endpoint = f"/labels/{name}"
+            label_payload = {'properties': {'color':color,'displayName':display_name}}
+            r = self.__workspace_query_helper__('get_workspaces', method='put', endpoint=label_endpoint, url=label_url, payload=label_payload, data_plane=False)
+            
+            label_properties = {'color':r.json()['properties'].get('color'),'displayName':r.json()['properties'].get('displayName')}
+            if kwargs.get('noprint'):
+                return(label_properties)
+            else:
+                print(f"created new label '{name}' in {workspace_name}\n")
+                print(json.dumps(label_properties, indent=2))
+        else:
+            logging.error(f"{workspace_name} not found")
+            raise Exception(workspace_name)
+    
+    def get_labels(self, workspace_name='', **kwargs):
+        if not workspace_name:
+            workspace_name = self._default_workspace_name
+        if self.__verify_workspace__(workspace_name):
+            tmp_path = self._workspaces[workspace_name].replace('eastus.easm.defender.microsoft.com','')
+            tmp_index = self._workspaces[workspace_name].replace('eastus.easm.defender.microsoft.com','').find('/workspaces/')
+            label_path = tmp_path[:tmp_index] + '/providers/Microsoft.Easm' + tmp_path[tmp_index:]
+            label_url = f"https://management.azure.com{label_path}"
+            label_endpoint = f"/labels"
+            r = self.__workspace_query_helper__('get_workspaces', method='get', endpoint=label_endpoint, url=label_url, data_plane=False)
+            
+            label_properties = {}
+            for label in r.json()['value']:
+                label_properties[label['name']] = {'color':label['properties'].get('color'),'displayName':label['properties'].get('displayName')}
+            if kwargs.get('noprint'):
+                return(label_properties)
+            else:
+                if label_properties:
+                    print(f"current labels in {workspace_name}\n")
+                    print(json.dumps(label_properties, indent=2))
+                else:
+                    print(f"no labels exist for {workspace_name}")
+        else:
+            logging.error(f"{workspace_name} not found")
+            raise Exception(workspace_name)
+
+    def update_assets(self, query_filter, new_state=None, labels=None, apply_labels=True, remove_labels=False, workspace_name=''):
+        """this function will update asset states and/or labels, depending on the submitted arguments. at least one of 'new_state' and/or 'labels' must be submitted.
+        
+        'new_state' expects a value in <mdeasm.Workspaces object>._state_map; e.g.: new_state='Approved', new_state='RequiresInvestigation', new_state=easm._state_map['Dependency']
+        
+        'labels' expects a list or comma-separated string of already-created labels available within the workspace. labels can be created/verified with create_or_update_label() and/or get_labels(). if a non-existent label is submitted, this will create it.
+        
+        when 'labels' are submitted, the default action will be to apply them to the assets found by 'query_filter'.
+        
+        if you want to instead remove labels from assets, submit 'apply_labels=False' and/or 'remove_labels=True'. if both 'apply_labels=True' and 'remove_labels=True' are submitted, 'remove_labels=True' will take precedence.
+        
+        this function will print the taskId value for the submitted update action, as well as append that taskId to the <mdeasm.Workspaces object>.task_ids list. this, or any other, taskId can be polled for completion progress with poll_asset_state_change()
+        """
+        if not new_state and not labels:
+            logging.error("must submit one of 'new_state' and/or 'labels'")
+            raise Exception("must submit one of 'new_state' and/or 'labels'")
+        if new_state and new_state in self._state_map:
+            new_state = self._state_map[new_state]
+        if new_state and new_state not in self._state_map.values():
+            logging.error(f"new_state not a valid value: {new_state}; must be one of {', '.join([v for v in self._state_map.values()])}")
+            raise Exception(f"new_state: {new_state}")
+        if remove_labels or not apply_labels:
+            label_action = False
+        else:
+            label_action = True
+        asset_update_payload = {'labels':{},'state':new_state,'externalId':None,'transfers':None}
+        if not workspace_name:
+            workspace_name = self._default_workspace_name
+        if labels and isinstance(labels, str):
+            labels = labels.split(',')
+            already_created_labels = self.get_labels(workspace_name=workspace_name, noprint=True)
+            for label in labels:
+                label = label.strip()
+                if label not in already_created_labels:
+                    logging.warning(f"label '{label}' not available within {workspace_name}; creating it with defaults")
+                    self.create_or_update_label(name=label)
+                asset_update_payload['labels'][label] = label_action
+        logging.debug(asset_update_payload)
+        if self.__verify_workspace__(workspace_name):
             try:
                 logging.debug(f"update_asset_state query_filter: {query_filter}")
-                #asset_count_params = {'filter': query_filter, 'maxpagesize': 1}
-                #asset_count_r = self.__workspace_query_helper__('update_asset_state', method='get', endpoint='assets', params=asset_count_params)
-                
-                asset_count_payload = {'filters': [query_filter]}
                 asset_count_payload = {'filters': [query_filter]}
                 asset_count_r = self.__workspace_query_helper__('update_asset_state', method='post', endpoint='reports/assets:summarize', payload=asset_count_payload)
                 asset_count = asset_count_r.json()['assetSummaries'][0]['count']
@@ -1096,11 +1139,13 @@ class Workspaces:
                 pass
             if not hasattr(self, 'task_ids'):
                 setattr(self, 'task_ids', [])
+            
             params = {'filter': query_filter}
-            payload = {'state': new_state}
-            r = self.__workspace_query_helper__('update_asset_state', method='patch', endpoint='assets', params=params, payload=payload)
+            r = self.__workspace_query_helper__('update_asset_state', method='patch', endpoint='assets', params=params, payload=asset_update_payload)
+            
+            print(f"task id for asset update action: {r.json()['id']}")
             self.task_ids.append(r.json()['id'])
-            return(self.task_ids)
+            #return(self.task_ids)
         else:
             logging.error(f"{workspace_name} not found")
             raise Exception(workspace_name)
@@ -1114,8 +1159,6 @@ class Workspaces:
         if task_id and not hasattr(self, 'task_ids'):
             setattr(self, 'task_ids', [])
             self.task_ids.append(task_id)
-        elif task_id and hasattr(self, 'task_id') and task_id not in self.task_ids:
-            self.task_ids.append(task_id)
         if not workspace_name:
             workspace_name = self._default_workspace_name
         if self.__verify_workspace__(workspace_name):
@@ -1125,22 +1168,25 @@ class Workspaces:
                 raise Exception
             else:
                 for task in r.json()['content']:
-                    if task['id'] not in self.task_ids and task['state'] != 'complete':
-                        self.task_ids.append(task['id'])
+                    if task_id and task_id == task['id']:
                         print(f"\ntask query:\n\t{task['metaData']['filter']}")
+                        print(f"\ntask actions:\n\t{task['metaData']['assetUpdateRequest']}")
+                        print(f"task status:\n\t{task['state']}")
                         print(f"task started:\n\t{task['startedAt']}")
                         print(f"total estimated assets to be updated:\n\t{task['metaData']['estimated']}")
-                        print(f"task completion percentage:\n\t{task['metaData']['progress']}%\n")
-                    elif task['id'] in self.task_ids and task['state'] != 'complete':
+                        print(f"current task completion percentage:\n\t{task['metaData']['progress']}%\n")
+                    elif task['state'] != 'complete':
                         print(f"\ntask query:\n\t{task['metaData']['filter']}")
+                        print(f"\ntask actions:\n\t{task['metaData']['assetUpdateRequest']}")
                         print(f"task started:\n\t{task['startedAt']}")
                         print(f"total estimated assets to be updated:\n\t{task['metaData']['estimated']}")
-                        print(f"task completion percentage:\n\t{task['metaData']['progress']}%\n")
-                    elif task['id'] in self.task_ids and task['state'] == 'complete':
+                        print(f"current task completion percentage:\n\t{task['metaData']['progress']}%\n")
+                    elif task['state'] == 'complete':
                         print(f"\ntask query:\n\t{task['metaData']['filter']}")
+                        print(f"\ntask actions:\n\t{task['metaData']['assetUpdateRequest']}")
                         print((f"task started:\n\t{task['startedAt']}"))
                         print(f"task completed:\n\t{task['completedAt']}\n")
-                        self.task_ids.remove(task['id'])
+                        print(f"total assets updated:\n\t{task['metaData']['estimated']}")
 
     def asset_lists(self):
         """retrieves and prints the current AssetList objects available within the Workspaces object
@@ -1167,6 +1213,59 @@ class Workspaces:
         else:
             print(f"\n".join(facet_filters_out))
 
+    def get_workspace_asset_summaries(self, query_filters=[], metric_categories=[], metrics=[], group_by='', workspace_name=''):
+        """submit one of:
+        
+                query_filters: must be a valid EASM query
+            
+                metric_categories: expects one of <mdeasm.Workspaces object>._metric_categories
+            
+                metrics: expects one of <mdeasm.Workspaces object>._metrics
+            
+            details are accessible through the <mdeasm.Workspaces object>.asset_summaries attribute; also prints <mdeasm.Workspaces object>.asset_summaries upon completion
+        """
+ 
+        if (not query_filters and not metric_categories and not metrics) or (query_filters and metric_categories and metrics) or (query_filters and metric_categories and not metrics) or (query_filters and not metric_categories and metrics) or (not query_filters and metric_categories and metrics):
+            logging.error('must submit one and only one of: query_filters, metric_categories, metrics')
+            raise Exception(f"query_filters: {query_filters}; metric_categories: {metric_categories}; metrics: {metrics}")
+
+        if query_filters and isinstance(query_filters, str):
+            query_filters = [query_filters]
+            logging.debug(query_filters)
+        if query_filters and not isinstance(query_filters, list):
+            logging.error(f"invalid query_filters; must be a list of valid EASM queries")
+            raise Exception(type(query_filters), query_filters)
+
+        if metric_categories and isinstance(metric_categories, str):
+            metric_categories = [metric_categories]
+            logging.debug(metric_categories)
+        if metric_categories and (not isinstance(metric_categories, list) or not all(met_cat in self._metric_categories for met_cat in metric_categories)):
+            logging.error(f"invalid metric_categories; must be a list and items be one of {self._metric_categories}")
+            raise Exception(metric_categories)
+
+        if metrics and isinstance(metrics, str):
+            metrics = [metrics]
+            logging.debug(metric_categories)
+        if metrics and (not isinstance(metrics, list) or not all(met in self._metrics for met in metrics)):
+            logging.error(f"invalid metrics; must be a list and items be one of {self._metrics}")
+            raise Exception(metrics)
+
+        if not workspace_name:
+            workspace_name = self._default_workspace_name
+        if self.__verify_workspace__(workspace_name):
+            payload = {'metricCategories': metric_categories, 'metrics': metrics, 'filters': query_filters, 'groupBy': None}
+            r = self.__workspace_query_helper__('get_workspace_asset_summaries', method='post', endpoint='reports/assets:summarize', payload=payload)
+            
+            submitted = query_filters + metric_categories + metrics
+            if not hasattr(self, 'asset_summaries'):
+                setattr(self, 'asset_summaries', {})
+            for idx,summary in enumerate(r.json()['assetSummaries']):
+                if (submitted[idx] == summary['metricCategory']) or (submitted[idx] == summary['metric']) or (submitted[idx] == summary['filter']):
+                    self.asset_summaries[submitted[idx]] = {'count':summary['count'], 'updatedAt':summary['updatedAt']}
+                else:
+                    logging.warning(f"{submitted[idx]} NOT EQUAL to any of {summary['metricCategory']}, {summary['metric']}, {summary['filter']}")
+            
+            print(json.dumps(self.asset_summaries, indent=2))
 
 class Asset:
     _exclude_attributes = [

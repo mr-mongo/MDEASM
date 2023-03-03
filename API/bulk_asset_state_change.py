@@ -1,7 +1,12 @@
 #!/usr/bin/python3
+import sys
 
-#easiest to import mdeasm.py if it is in the same directory as this bulk_asset_state_change.py script
+#easiest to import mdeasm.py if it is in the same directory as this retreive_risk_observations.py script
+#requires mdeasm.py VERSION 1.3
 import mdeasm
+
+if mdeasm._VERSION < 1.3:
+    sys.exit(f"requires mdeasm.py VERSION 1.3; current version: {mdeasm._VERSION}")
 #
 # run either Option 1 or Option 2 (comment out each line in the section you are not running)
 
@@ -17,9 +22,9 @@ client_secret = ''
 
 easm = mdeasm.Workspaces(workspace_name=workspace_name, tenant_id=tenant_id, subscription_id=subscription_id, client_id=client_id, client_secret=client_secret)
 
-all_approved_assets = f"state = \"{easm._state_map['approved']}\""
+all_approved_assets = f"state = \"{easm._state_map['Approved']}\""
 
-#enter one of: candidate,dependency,monitorOnly,requiresInvestigation,dismissed
+#enter one of: Candidate,Dependency,MonitorOnly,RequiresInvestigation,Dismissed
 new_state = easm._state_map['']
 
 #####################################
@@ -30,7 +35,7 @@ new_state = easm._state_map['']
 #  move 200 assets from new state back to Approved
 
 # this will submit the change, but that change will take a while to complete
-easm.update_asset_state(new_state=new_state, query_filter=all_approved_assets)
+easm.update_assets(query_filter=all_approved_assets, new_state=new_state)
 
 move_all_approved_assets_task = easm.task_id[0]
 print(f"move_all_approved_assets_task task id: {move_all_approved_assets_task}")
@@ -51,7 +56,7 @@ for i in range(0, len(easm.assetList.assets), 50):
         asset_uiid_list.append(asset.uuid)
     asset_uuid_str = '","'.join(asset_uiid_list)
     update_state_query = f"uuid in (\"{asset_uuid_str}\") AND state !empty"
-    easm.update_asset_state(new_state=easm._state_map['approved'], query_filter=update_state_query)
+    easm.update_assets(query_filter=update_state_query, new_state=easm._state_map['Approved'])
 
 # this will take a few minutes to complete the change, even after function finishes
 # confirm in the UI that 200 assets are back in Approved state
@@ -78,7 +83,7 @@ for i in range(0, len(easm.assetList.assets), 50):
     
     asset_uuid_str = '","'.join(asset_uiid_list)
     update_state_query = f"uuid in (\"{asset_uuid_str}\") AND state !empty"
-    easm.update_asset_state(new_state=new_state, query_filter=update_state_query)
+    easm.update_assets(query_filter=update_state_query, new_state=new_state)
     
     # this will create several hundred state change tasks
     # so not polling any of them for status or completion

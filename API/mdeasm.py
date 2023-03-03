@@ -34,6 +34,7 @@ _VERSION = 1.3
 #   adjusted update_asset_states() --> update_assets()
 #       added support for adding/removing asset labels
 #       added function summary/usage details
+#   adjusted __facet_filter_helper__()'s eval of assetSecurityPolicies to only include isAffected=True
 #
 # TODO 
 #   create/update azure resource tags
@@ -67,7 +68,7 @@ class Workspaces:
     #'sslCerts':('issuerAlternativeNames','issuerCommonNames','issuerCountry','issuerLocality','issuerOrganizationalUnits','issuerOrganizations','issuerState','keyAlgorithm','keySize','organizationalUnits','organizations','selfSigned','serialNumber','sha1','sigAlgName','sigAlgOid','subjectAlternativeNames','subjectCommonNames','subjectCountry','subjectLocality','subjectOrganizationalUnits','subjectOrganizations','subjectState','validationType','version')
     #'webComponents':('name','type','version','cve,name','cve,cvssScore','cve,cvss3Summary,baseScore')
     _facet_filters = {
-        'assetSecurityPolicies':('policyName','description','isAffected'),'attributes':('attributeType','attributeValue'),'banners':('banner','port'),'cookies':('cookieName'),'finalIpBlocks':('ipBlock'),'headers':('headerName','headerValue'),'ipBlocks':('ipBlock'),'location':('value,countrycode','value,countryname','value,latitude','value,longitude'),'reputations':('threatType','listName'),'resourceUrls':('url'),'responseHeaders':('headerName','headerValue'),'services':('port','scheme','portStates,value'),'soaRecords':('nameServer','email','serialNumber'),'sslServerConfig':('cipherSuites','tlsVersions'),'webComponents':('name','type','version'),'cveId':('webComponent','name','cvssScore')}
+        'assetSecurityPolicies':('policyName','description'),'attributes':('attributeType','attributeValue'),'banners':('banner','port'),'cookies':('cookieName'),'finalIpBlocks':('ipBlock'),'headers':('headerName','headerValue'),'ipBlocks':('ipBlock'),'location':('value,countrycode','value,countryname','value,latitude','value,longitude'),'reputations':('threatType','listName'),'resourceUrls':('url'),'responseHeaders':('headerName','headerValue'),'services':('port','scheme','portStates,value'),'soaRecords':('nameServer','email','serialNumber'),'sslServerConfig':('cipherSuites','tlsVersions'),'webComponents':('name','type','version'),'cveId':('webComponent','name','cvssScore')}
 
     def __init__(self, tenant_id, subscription_id, client_id, client_secret, workspace_name='', *args, **kwargs) -> None:
         self._tenant_id = tenant_id
@@ -407,6 +408,20 @@ class Workspaces:
                             else:
                                 logging.debug(f"empty location[value] dict in asset {asset.id}")
                                 pass
+                        
+                        elif key == 'assetSecurityPolicies':
+                            if list_item['isAffected']:
+                                eval_commands = []
+                                for facet in self._facet_filters[key]:
+                                    eval_commands.append(f"list_item.get('{facet}')")
+                                eval_commands = ','.join(eval_commands)
+                                logging.debug(f"eval command string: {eval_commands}")
+                                try:
+                                    getattr(self.filters, key)[(eval(eval_commands))]['count'] += 1
+                                    getattr(self.filters, key)[(eval(eval_commands))]['assets'].append(asset.id)
+                                
+                                except KeyError:
+                                    getattr(self.filters, key)[(eval(eval_commands))] = {'count':1, 'assets':[asset.id]}
                         
                         else:
                             for list_item in getattr(asset, key):

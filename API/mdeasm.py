@@ -35,6 +35,7 @@ _VERSION = 1.3
 #       added support for adding/removing asset labels
 #       added function summary/usage details
 #   adjusted __facet_filter_helper__()'s eval of assetSecurityPolicies to only include isAffected=True
+#   adjusted poll_asset_state_change() print behavior
 #
 # TODO 
 #   create/update azure resource tags

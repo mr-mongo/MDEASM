@@ -36,6 +36,9 @@ _VERSION = 1.3
 #       added function summary/usage details
 #   adjusted __facet_filter_helper__()'s eval of assetSecurityPolicies to only include isAffected=True
 #   adjusted poll_asset_state_change() print behavior
+#   automatically run get_workspaces() on Workspaces initialization
+#   _workspaces  dict now includes URI+PATH for both Data Plane (_workspaces[<workspace_name>][0]) & Control Plane (_workspaces[<workspace_name>][1])
+#       #adjusted __workspace_query_helper__() to retrieve DP or CP URI+PATH automatically
 #
 # TODO 
 #   create/update azure resource tags
@@ -81,6 +84,7 @@ class Workspaces:
         self._dp_token = self.__bearer_token__(data_plane=True)
         self._workspaces = requests.structures.CaseInsensitiveDict()
         self._expiry = int()
+        self.get_workspaces(workspace_name=workspace_name)
 
     def __bearer_token__(self, data_plane=False):
         url = f"https://login.microsoftonline.com/{self._tenant_id}/oauth2/v2.0/token"
@@ -163,14 +167,14 @@ class Workspaces:
             disco_results = {}
             if disco_name:
                 disco_results[disco_name] = []
-                r = self.__workspace_query_helper__('__get_discovery_group_runs__', method='get', endpoint=f"discoGroups/{disco_name}/runs")
+                r = self.__workspace_query_helper__('__get_discovery_group_runs__', method='get', endpoint=f"discoGroups/{disco_name}/runs", workspace_name=workspace_name)
                 for run in r.json()['content']:
                     disco_results[disco_name].append({'state':run['state'], 'submittedDate':run['submittedDate'], 'completedDate':run['completedDate'], 'totalAssetsFoundCount':run['totalAssetsFoundCount']})
             else:
                 disco_names = list(set([run['name'] for run in self.get_discovery_groups(workspace_name)['content']]))
                 for disco in disco_names:
                     disco_results[disco] = []
-                    r = self.__workspace_query_helper__('__get_discovery_group_runs__', method='get', endpoint=f"discoGroups/{disco}/runs")
+                    r = self.__workspace_query_helper__('__get_discovery_group_runs__', method='get', endpoint=f"discoGroups/{disco}/runs", workspace_name=workspace_name)
                     for run in r.json()['content']:
                         disco_results[disco].append({'state':run['state'], 'submittedDate':run['submittedDate'], 'completedDate':run['completedDate'], 'totalAssetsFoundCount':run['totalAssetsFoundCount']})
             return(disco_results)
@@ -486,10 +490,14 @@ class Workspaces:
             token = self._cp_token
         if url:
             helper_url = f"{url}/{urllib.parse.quote(endpoint)}"
-        elif workspace_name:
-            helper_url = f"https://{self._workspaces[workspace_name]}/{urllib.parse.quote(endpoint)}"
-        else:
-            helper_url = f"https://{self._workspaces[self._default_workspace_name]}/{urllib.parse.quote(endpoint)}"
+        elif workspace_name and data_plane:
+            helper_url = f"https://{self._workspaces[workspace_name][0]}/{urllib.parse.quote(endpoint)}"
+        elif workspace_name and not data_plane:
+            helper_url = f"https://{self._workspaces[workspace_name][1]}/{urllib.parse.quote(endpoint)}"
+        elif not workspace_name and data_plane:
+            helper_url = f"https://{self._workspaces[self._default_workspace_name][0]}/{urllib.parse.quote(endpoint)}"
+        elif not workspace_name and not data_plane:
+            helper_url = f"https://{self._workspaces[self._default_workspace_name][1]}/{urllib.parse.quote(endpoint)}"
             
         helper_headers = {'Authorization': f"Bearer {token}"}
         helper_params = {'api-version': '2022-04-01-preview'}
@@ -521,11 +529,11 @@ class Workspaces:
 
     def get_workspaces(self, workspace_name=''):
         url = f"https://management.azure.com/subscriptions/{self._subscription_id}/providers/Microsoft.Easm/"
-        r = self.__workspace_query_helper__('get_workspaces', method='get', endpoint='workspaces', url=url, data_plane=False)
+        r = self.__workspace_query_helper__('get_workspaces', method='get', endpoint='workspaces', url=url, data_plane=False, workspace_name=workspace_name)
         if workspace_name:
             for workspace in r.json()['value']:
                 if workspace['name'].lower() == workspace_name.lower():
-                    self._workspaces[workspace['name']] = f"{workspace['properties']['dataPlaneEndpoint']}{workspace['id'].replace('/providers/Microsoft.Easm','')}"
+                    self._workspaces[workspace['name']] = (f"{workspace['properties']['dataPlaneEndpoint']}{workspace['id'].replace('/providers/Microsoft.Easm','')}",f"management.azure.com{workspace['id']}")
                     self.__set_default_workspace_name__(workspace['name'])
             if not self._workspaces.get(workspace_name):
                 logging.info(f"{workspace_name} not found in subscription {self._subscription_id}")
@@ -549,8 +557,8 @@ class Workspaces:
         else:
             url = f"https://management.azure.com/subscriptions/{self._subscription_id}/resourceGroups/{resource_group_name}/providers/Microsoft.Easm"
             payload = {'location': location}
-            r = self.__workspace_query_helper__('create_workspace', method='put', endpoint=f"workspaces/{workspace_name}", url=url, payload=payload, data_plane=False)
-            self._workspaces[workspace_name] = f"{r.json()['properties']['dataPlaneEndpoint']}{r.json()['id'].replace('/providers/Microsoft.Easm','')}"
+            r = self.__workspace_query_helper__('create_workspace', method='put', endpoint=f"workspaces/{workspace_name}", url=url, payload=payload, data_plane=False, workspace_name=workspace_name)
+            self._workspaces[workspace_name] = (f"{r.json()['properties']['dataPlaneEndpoint']}{r.json()['id'].replace('/providers/Microsoft.Easm','')}",f"management.azure.com{r.json()['id']}")
             self.__set_default_workspace_name__(r.json()['name'])
             return({workspace_name: self._workspaces[workspace_name]})
     
@@ -559,7 +567,7 @@ class Workspaces:
             workspace_name = self._default_workspace_name
         if self.__verify_workspace__(workspace_name):
             params = {'filter': org_name}
-            r = self.__workspace_query_helper__('get_discovery_templates', method='get', endpoint='discoTemplates', params=params)
+            r = self.__workspace_query_helper__('get_discovery_templates', method='get', endpoint='discoTemplates', params=params, workspace_name=workspace_name)
             for org in r.json()['content']:
                 logging.info(org)
                 if org['name'][-1] != '.':
@@ -574,7 +582,7 @@ class Workspaces:
         if not workspace_name:
             workspace_name = self._default_workspace_name
         if self.__verify_workspace__(workspace_name):
-            r = self.__workspace_query_helper__('get_discovery_template_by_id', method='get', endpoint=f"discoTemplates/{template_id}", )
+            r = self.__workspace_query_helper__('get_discovery_template_by_id', method='get', endpoint=f"discoTemplates/{template_id}", workspace_name=workspace_name)
             print(json.dumps(r.json(), indent=2))
             return(r.json())
         else:
@@ -646,7 +654,7 @@ class Workspaces:
         if not workspace_name:
             workspace_name = self._default_workspace_name
         if self.__verify_workspace__(workspace_name):
-            r = self.__workspace_query_helper__('get_discovery_groups', method='get', endpoint='discoGroups')
+            r = self.__workspace_query_helper__('get_discovery_groups', method='get', endpoint='discoGroups', workspace_name=workspace_name)
             return(r.json())
         else:
             logging.error(f"{workspace_name} not found")
@@ -716,7 +724,7 @@ class Workspaces:
             run_query=True
             page_counter=0
             while run_query:
-                r = self.__workspace_query_helper__('get_workspace_assets', method='get', endpoint='assets', params=params)
+                r = self.__workspace_query_helper__('get_workspace_assets', method='get', endpoint='assets', params=params, workspace_name=workspace_name)
             
                 content = []
                 self.__asset_content_helper__(r, content_list=content, asset_list_name=asset_list_name, get_recent=get_recent, last_seen_days_back=last_seen_days_back, date_range_start=date_range_start, date_range_end=date_range_end)
@@ -801,7 +809,7 @@ class Workspaces:
             orig_asset_id, verified_asset_id = self.__validate_asset_id__(asset_id)
             setattr(self, asset_id, Asset())
             
-            r = self.__workspace_query_helper__('get_workspace_asset_by_id', method='get', endpoint=f"assets/{verified_asset_id}")
+            r = self.__workspace_query_helper__('get_workspace_asset_by_id', method='get', endpoint=f"assets/{verified_asset_id}", workspace_name=workspace_name)
             
             self.__asset_content_helper__(r, asset_id=orig_asset_id, get_recent=get_recent, last_seen_days_back=last_seen_days_back, date_range_start=date_range_start, date_range_end=date_range_end)
             
@@ -840,7 +848,7 @@ class Workspaces:
                 metric_categories = ['priority_high_severity','priority_medium_severity','priority_low_severity']
             
             summarize_payload = {'metricCategories': metric_categories, 'metrics': None, 'filters': None, 'groupBy': None}
-            r_summarize = self.__workspace_query_helper__('get_workspace_risk_observations', method='post', endpoint='reports/assets:summarize', payload=summarize_payload)
+            r_summarize = self.__workspace_query_helper__('get_workspace_risk_observations', method='post', endpoint='reports/assets:summarize', payload=summarize_payload, workspace_name=workspace_name)
             
             metrics = {}
             for summary in r_summarize.json()['assetSummaries']:
@@ -861,7 +869,7 @@ class Workspaces:
                     asset_uuids = []
                     get_next = True
                     while get_next:
-                        r_snapshot = self.__workspace_query_helper__('get_workspace_risk_observations', method='post', endpoint='reports/assets:snapshot', payload=snapshot_payload)
+                        r_snapshot = self.__workspace_query_helper__('get_workspace_risk_observations', method='post', endpoint='reports/assets:snapshot', payload=snapshot_payload, workspace_name=workspace_name)
                         for asset in r_snapshot.json()['assets']['content']:
                             asset_uuids.append(asset['uuid'])
                         if r_snapshot.json()['assets']['last']:
@@ -1056,13 +1064,14 @@ class Workspaces:
         if not workspace_name:
             workspace_name = self._default_workspace_name
         if self.__verify_workspace__(workspace_name):
-            tmp_path = self._workspaces[workspace_name].replace('eastus.easm.defender.microsoft.com','')
-            tmp_index = self._workspaces[workspace_name].replace('eastus.easm.defender.microsoft.com','').find('/workspaces/')
-            label_path = tmp_path[:tmp_index] + '/providers/Microsoft.Easm' + tmp_path[tmp_index:]
-            label_url = f"https://management.azure.com{label_path}"
+            #tmp_path = self._workspaces[workspace_name].replace('eastus.easm.defender.microsoft.com','')
+            #tmp_index = self._workspaces[workspace_name].replace('eastus.easm.defender.microsoft.com','').find('/workspaces/')
+            #label_path = tmp_path[:tmp_index] + '/providers/Microsoft.Easm' + tmp_path[tmp_index:]
+            #label_url = f"https://management.azure.com{label_path}"
             label_endpoint = f"/labels/{name}"
             label_payload = {'properties': {'color':color,'displayName':display_name}}
-            r = self.__workspace_query_helper__('get_workspaces', method='put', endpoint=label_endpoint, url=label_url, payload=label_payload, data_plane=False)
+            #r = self.__workspace_query_helper__('get_workspaces', method='put', endpoint=label_endpoint, url=label_url, payload=label_payload, data_plane=False)
+            r = self.__workspace_query_helper__('get_workspaces', method='put', endpoint=label_endpoint, payload=label_payload, data_plane=False, workspace_name=workspace_name)
             
             label_properties = {'color':r.json()['properties'].get('color'),'displayName':r.json()['properties'].get('displayName')}
             if kwargs.get('noprint'):
@@ -1078,12 +1087,13 @@ class Workspaces:
         if not workspace_name:
             workspace_name = self._default_workspace_name
         if self.__verify_workspace__(workspace_name):
-            tmp_path = self._workspaces[workspace_name].replace('eastus.easm.defender.microsoft.com','')
-            tmp_index = self._workspaces[workspace_name].replace('eastus.easm.defender.microsoft.com','').find('/workspaces/')
-            label_path = tmp_path[:tmp_index] + '/providers/Microsoft.Easm' + tmp_path[tmp_index:]
-            label_url = f"https://management.azure.com{label_path}"
+            #tmp_path = self._workspaces[workspace_name].replace('eastus.easm.defender.microsoft.com','')
+            #tmp_index = self._workspaces[workspace_name].replace('eastus.easm.defender.microsoft.com','').find('/workspaces/')
+            #label_path = tmp_path[:tmp_index] + '/providers/Microsoft.Easm' + tmp_path[tmp_index:]
+            #label_url = f"https://management.azure.com{label_path}"
             label_endpoint = f"/labels"
-            r = self.__workspace_query_helper__('get_workspaces', method='get', endpoint=label_endpoint, url=label_url, data_plane=False)
+            #r = self.__workspace_query_helper__('get_workspaces', method='get', endpoint=label_endpoint, url=label_url, data_plane=False)
+            r = self.__workspace_query_helper__('get_workspaces', method='get', endpoint=label_endpoint, data_plane=False, workspace_name=workspace_name)
             
             label_properties = {}
             for label in r.json()['value']:
@@ -1178,7 +1188,7 @@ class Workspaces:
         if not workspace_name:
             workspace_name = self._default_workspace_name
         if self.__verify_workspace__(workspace_name):
-            r = self.__workspace_query_helper__('poll_asset_state_change', method='get', endpoint='tasks')
+            r = self.__workspace_query_helper__('poll_asset_state_change', method='get', endpoint='tasks', workspace_name=workspace_name)
             if r.json()['totalElements'] == 0:
                 logging.error("no tasks found for workspace: {workspace_name}")
                 raise Exception
@@ -1270,7 +1280,7 @@ class Workspaces:
             workspace_name = self._default_workspace_name
         if self.__verify_workspace__(workspace_name):
             payload = {'metricCategories': metric_categories, 'metrics': metrics, 'filters': query_filters, 'groupBy': None}
-            r = self.__workspace_query_helper__('get_workspace_asset_summaries', method='post', endpoint='reports/assets:summarize', payload=payload)
+            r = self.__workspace_query_helper__('get_workspace_asset_summaries', method='post', endpoint='reports/assets:summarize', payload=payload, workspace_name=workspace_name)
             
             submitted = query_filters + metric_categories + metrics
             if not hasattr(self, 'asset_summaries'):

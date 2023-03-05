@@ -4,11 +4,13 @@ _VERSION = 1.3
 # Created by Josh Randall
 # jorandall@microsoft.com
 # 
+# CHANGELOG
+# https://github.com/fer39e4f/MDEASM/blob/main/API/changelog.md
 #
 # TODO 
 #   create/update azure resource tags
 #   delete azure resource
-#   delete disco group
+#   delete disco group (endpoint bugged)
 #   asset snapshots
 #   create/update saved filters
 #   get saved filters
@@ -1150,24 +1152,27 @@ class Workspaces:
             else:
                 for task in r.json()['content']:
                     if task_id and task_id == task['id']:
-                        print(f"\ntask query:\n\t{task['metaData']['filter']}")
-                        print(f"\ntask actions:\n\t{task['metaData']['assetUpdateRequest']}")
+                        print(f"\ntask id:\n\t{task['id']}")
+                        print(f"task query:\n\t{task['metadata']['filter']}")
+                        print(f"task actions:\n\t{task['metadata']['assetUpdateRequest']}")
                         print(f"task status:\n\t{task['state']}")
                         print(f"task started:\n\t{task['startedAt']}")
-                        print(f"total estimated assets to be updated:\n\t{task['metaData']['estimated']}")
-                        print(f"current task completion percentage:\n\t{task['metaData']['progress']}%\n")
+                        print(f"total estimated assets to be updated:\n\t{task['metadata']['estimated']}")
+                        print(f"current task completion percentage:\n\t{task['metadata']['progress']}%")
                     elif task['state'] != 'complete':
-                        print(f"\ntask query:\n\t{task['metaData']['filter']}")
-                        print(f"\ntask actions:\n\t{task['metaData']['assetUpdateRequest']}")
+                        print(f"\ntask id:\n\t{task['id']}")
+                        print(f"task query:\n\t{task['metadata']['filter']}")
+                        print(f"task actions:\n\t{task['metadata']['assetUpdateRequest']}")
                         print(f"task started:\n\t{task['startedAt']}")
-                        print(f"total estimated assets to be updated:\n\t{task['metaData']['estimated']}")
-                        print(f"current task completion percentage:\n\t{task['metaData']['progress']}%\n")
+                        print(f"total estimated assets to be updated:\n\t{task['metadata']['estimated']}")
+                        print(f"current task completion percentage:\n\t{task['metadata']['progress']}%")
                     elif task['state'] == 'complete':
-                        print(f"\ntask query:\n\t{task['metaData']['filter']}")
-                        print(f"\ntask actions:\n\t{task['metaData']['assetUpdateRequest']}")
+                        print(f"\ntask id:\n\t{task['id']}")
+                        print(f"task query:\n\t{task['metadata']['filter']}")
+                        print(f"task actions:\n\t{task['metadata']['assetUpdateRequest']}")
                         print((f"task started:\n\t{task['startedAt']}"))
-                        print(f"task completed:\n\t{task['completedAt']}\n")
-                        print(f"total assets updated:\n\t{task['metaData']['estimated']}")
+                        print(f"task completed:\n\t{task['completedAt']}")
+                        print(f"total assets updated:\n\t{task['metadata']['estimated']}")
 
     def asset_lists(self):
         """retrieves and prints the current AssetList objects available within the Workspaces object
@@ -1250,7 +1255,7 @@ class Workspaces:
 
 class Asset:
     _exclude_attributes = [
-        'alexaInfos','domainAsset','guids','hostCore','responseBodyMinhashSignatures','fullDomMinhashSignatures','responseBodyHashSignatures','scanMetadata','sources']
+        'alexaInfos','domainAsset','guids','hostCore','responseBodyMinhashSignatures','fullDomMinhashSignatures','responseBodyHashSignatures','scanmetadata','sources']
     _exclude_keys = {
             'firstSeenCrawlGuid','firstSeenPageGuid','firstSeenResourceGuid','lastSeenCrawlGuid','lastSeenPageGuid','lastSeenResourceGuid','responseBodyMinhash','resources','sources'}
     def __init__(self, *args, **kwargs) -> None:

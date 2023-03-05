@@ -4,41 +4,6 @@ _VERSION = 1.3
 # Created by Josh Randall
 # jorandall@microsoft.com
 # 
-# version 1.0, JAN 2023
-#
-# version 1.1, JAN 2023
-#   added create_facet_filter support for when attribute_value is itself a list of dicts
-#   added deduping for create_facet_filter output
-#   changed self._state_map from dict to --> requests.structures.CaseInsensitiveDict()
-#   added get_workspace_asset_summaries
-#   added default option to auto-create facet filters
-#       also made facet filters a class object, so asset filters are now object attributes
-#   added csv and json file output options for query_facet_filter()
-#
-# version 1.2, FEB 2023
-#   added get_workspace_risk_observations() for retrieving asset details for high,medium,low observations
-#       reports/assets:summarize --> reports/assets:snapshot --> /assets
-#   adjusted evaluation of date_range_start
-#       any asset details where 'lastSeen' is AFTER the supplied date will be included
-#   adjusted evaluation of date_range_end
-#       any asset details where 'lastSeen' is BEFORE the supplied date will be included
-#   added 'names' list support to create_discovery_group() disco_custom arg
-#   moved create_discovery_group() dependency from __run_discovery_group__() to __workspace_query_helper__()
-#       removed __run_discovery_group__()
-#   fixed bug when __get_discovery_group_runs__() would be called without disco_name arg
-#   added asset_lists() and facet_filters() to enable easier finding of AssetList and FacetFilter objects within a mdeasm.Workspaces object
-#
-# version 1.3, FEB 2023
-#   added create_or_update_label()
-#   added get_labels()
-#   adjusted update_asset_states() --> update_assets()
-#       added support for adding/removing asset labels
-#       added function summary/usage details
-#   adjusted __facet_filter_helper__()'s eval of assetSecurityPolicies to only include isAffected=True
-#   adjusted poll_asset_state_change() print behavior
-#   automatically run get_workspaces() on Workspaces initialization
-#   _workspaces  dict now includes URI+PATH for both Data Plane (_workspaces[<workspace_name>][0]) & Control Plane (_workspaces[<workspace_name>][1])
-#       #adjusted __workspace_query_helper__() to retrieve DP or CP URI+PATH automatically
 #
 # TODO 
 #   create/update azure resource tags
@@ -1064,13 +1029,8 @@ class Workspaces:
         if not workspace_name:
             workspace_name = self._default_workspace_name
         if self.__verify_workspace__(workspace_name):
-            #tmp_path = self._workspaces[workspace_name].replace('eastus.easm.defender.microsoft.com','')
-            #tmp_index = self._workspaces[workspace_name].replace('eastus.easm.defender.microsoft.com','').find('/workspaces/')
-            #label_path = tmp_path[:tmp_index] + '/providers/Microsoft.Easm' + tmp_path[tmp_index:]
-            #label_url = f"https://management.azure.com{label_path}"
             label_endpoint = f"/labels/{name}"
             label_payload = {'properties': {'color':color,'displayName':display_name}}
-            #r = self.__workspace_query_helper__('get_workspaces', method='put', endpoint=label_endpoint, url=label_url, payload=label_payload, data_plane=False)
             r = self.__workspace_query_helper__('get_workspaces', method='put', endpoint=label_endpoint, payload=label_payload, data_plane=False, workspace_name=workspace_name)
             
             label_properties = {'color':r.json()['properties'].get('color'),'displayName':r.json()['properties'].get('displayName')}
@@ -1087,12 +1047,7 @@ class Workspaces:
         if not workspace_name:
             workspace_name = self._default_workspace_name
         if self.__verify_workspace__(workspace_name):
-            #tmp_path = self._workspaces[workspace_name].replace('eastus.easm.defender.microsoft.com','')
-            #tmp_index = self._workspaces[workspace_name].replace('eastus.easm.defender.microsoft.com','').find('/workspaces/')
-            #label_path = tmp_path[:tmp_index] + '/providers/Microsoft.Easm' + tmp_path[tmp_index:]
-            #label_url = f"https://management.azure.com{label_path}"
             label_endpoint = f"/labels"
-            #r = self.__workspace_query_helper__('get_workspaces', method='get', endpoint=label_endpoint, url=label_url, data_plane=False)
             r = self.__workspace_query_helper__('get_workspaces', method='get', endpoint=label_endpoint, data_plane=False, workspace_name=workspace_name)
             
             label_properties = {}

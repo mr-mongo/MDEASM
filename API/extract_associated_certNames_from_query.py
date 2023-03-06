@@ -1,17 +1,7 @@
 import mdeasm
 from dateutil import parser
 
-# name of the EASM resource
-workspace_name = ''
-
-tenant_id = ''
-subscription_id = ''
-
-# service principal needs to have Contributor permissions on EASM resource
-client_id = ''
-client_secret = ''
-
-easm = mdeasm.Workspaces(workspace_name=workspace_name, tenant_id=tenant_id, subscription_id=subscription_id, client_id=client_id, client_secret=client_secret)
+easm = mdeasm.Workspaces(workspace_name=mdeasm.workspace_name, tenant_id=mdeasm.tenant_id, subscription_id=mdeasm.subscription_id, client_id=mdeasm.client_id, client_secret=mdeasm.client_secret)
 
 # a query for domain, host, page, and ip assets with CNs
 approved_ips_query = 'state = "confirmed" AND kind in ("domain", "host", "ipAddress", "page") AND subjectCommonName !empty'

@@ -8,7 +8,7 @@ import mdeasm
 if mdeasm._VERSION < 1.2:
     sys.exit(f"requires mdeasm.py VERSION 1.2; current version: {mdeasm._VERSION}")
 
-easm = mdeasm.Workspaces(workspace_name=mdeasm.workspace_name, tenant_id=mdeasm.tenant_id, subscription_id=mdeasm.subscription_id, client_id=mdeasm.client_id, client_secret=mdeasm.client_secret)
+easm = mdeasm.Workspaces()
 
 #the get_workspace_risk_observations() funnction will print the names of all risk observation details retreived
 #as well as where to access the asset and facet filter attributes

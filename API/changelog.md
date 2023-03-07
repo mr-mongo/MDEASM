@@ -1,3 +1,6 @@
+**version 1.4**, FEB 2023  
+moved to centralized environment mangement  
+adjusted `Workspaces.__init__()` to automatically retrieve ENV variables `TENANT_ID, SUBSCRIPTION_ID, CLIENT_ID, CLIENT_SECRET, WORKSPACE_NAME`  
 
 **version 1.3**, FEB 2023  
 added `create_or_update_label()`  

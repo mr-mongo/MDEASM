@@ -10,7 +10,7 @@ if mdeasm._VERSION < 1.3:
 #
 # run either Option 1 or Option 2 (comment out each line in the section you are not running)
 
-easm = mdeasm.Workspaces(workspace_name=mdeasm.workspace_name, tenant_id=mdeasm.tenant_id, subscription_id=mdeasm.subscription_id, client_id=mdeasm.client_id, client_secret=mdeasm.client_secret)
+easm = mdeasm.Workspaces()
 
 all_approved_assets = f"state = \"{easm._state_map['Approved']}\""
 

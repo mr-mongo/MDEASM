@@ -1,3 +1,6 @@
 .env
-__pycache__
 data
+**/__pycache__
+**/testing
+**/testing.py
+**/testing.ipynb

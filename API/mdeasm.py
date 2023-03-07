@@ -498,10 +498,12 @@ class Workspaces:
                         if self.__token_expiry__(self._dp_token):
                             self._dp_token = self.__bearer_token__(data_plane=True)
                         token = self._dp_token
+                        helper_headers = {'Authorization': f"Bearer {token}"}
                     else:
                         if self.__token_expiry__(self._cp_token):
                             self._dp_token = self.__bearer_token__()
                         token = self._cp_token
+                        helper_headers = {'Authorization': f"Bearer {token}"}
 
             except Exception as e:
                 logging.warning(f"called by: {calling_func} -- endpoint: {endpoint} -- page: {helper_params.get('skip')} -- attempt: {retry_counter} of {max_retry} -- error: {str(e)}")
@@ -510,10 +512,12 @@ class Workspaces:
                     if self.__token_expiry__(self._dp_token):
                         self._dp_token = self.__bearer_token__(data_plane=True)
                     token = self._dp_token
+                    helper_headers = {'Authorization': f"Bearer {token}"}
                 else:
                     if self.__token_expiry__(self._cp_token):
                         self._dp_token = self.__bearer_token__()
                     token = self._cp_token
+                    helper_headers = {'Authorization': f"Bearer {token}"}
         return(r)
 
     def get_workspaces(self, workspace_name=''):

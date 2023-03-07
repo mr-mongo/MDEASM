@@ -2,11 +2,11 @@
 import sys
 
 #easiest to import mdeasm.py if it is in the same directory as this retreive_risk_observations.py script
-#requires mdeasm.py VERSION 1.3
+#requires mdeasm.py VERSION 1.4
 import mdeasm
 
-if mdeasm._VERSION < 1.3:
-    sys.exit(f"requires mdeasm.py VERSION 1.3; current version: {mdeasm._VERSION}")
+if mdeasm._VERSION < 1.4:
+    sys.exit(f"requires mdeasm.py VERSION 1.4; current version: {mdeasm._VERSION}")
 #
 # run either Option 1 or Option 2 (comment out each line in the section you are not running)
 

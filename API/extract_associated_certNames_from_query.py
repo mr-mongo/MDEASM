@@ -1,7 +1,7 @@
 import mdeasm
 from dateutil import parser
 
-easm = mdeasm.Workspaces(workspace_name=mdeasm.workspace_name, tenant_id=mdeasm.tenant_id, subscription_id=mdeasm.subscription_id, client_id=mdeasm.client_id, client_secret=mdeasm.client_secret)
+easm = mdeasm.Workspaces()
 
 # a query for domain, host, page, and ip assets with CNs
 approved_ips_query = 'state = "confirmed" AND kind in ("domain", "host", "ipAddress", "page") AND subjectCommonName !empty'

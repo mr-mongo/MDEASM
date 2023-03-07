@@ -1,6 +1,6 @@
 import mdeasm
 
-easm = mdeasm.Workspaces(workspace_name=mdeasm.workspace_name, tenant_id=mdeasm.tenant_id, subscription_id=mdeasm.subscription_id, client_id=mdeasm.client_id, client_secret=mdeasm.client_secret)
+easm = mdeasm.Workspaces()
 
 #query for hosts with at least one CNAME record but no live IP Address
 hosts_with_cnames = 'state = "confirmed" AND kind = "host" AND ipAddress empty AND cname !empty'

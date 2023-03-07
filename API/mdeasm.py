@@ -20,6 +20,18 @@ _VERSION = 1.3
 
 import requests, time, urllib.parse, jwt, datetime, base64, uuid, re, binascii, logging, json, pathlib
 from dateutil import parser
+from dotenv import load_dotenv
+import os #provides ways to access the Operating System and allows us to read the environment variables
+
+load_dotenv()
+
+client_id = os.getenv("CLIENT_ID")
+client_secret = os.getenv("CLIENT_SECRET")
+tenant_id = os.getenv("TENANT_ID")
+subscription_id = os.getenv("SUBSCRIPTION_ID")
+resource_group_name = os.getenv("RESOURCE_GROUP_NAME")
+workspace_name = os.getenv("WORKSPACE_NAME")
+easm_region = os.getenv("EASM_REGION")
 
 log_level = 'WARNING'   ## DEBUG,INFO,WARNING,ERROR,CRITICAL ##
 

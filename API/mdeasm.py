@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-_VERSION = 1.3
+_VERSION = 1.4
 # Created by Josh Randall
 # jorandall@microsoft.com
 # 
@@ -18,8 +18,11 @@ _VERSION = 1.3
 #   cancel tasks
 
 
-import requests, time, urllib.parse, jwt, datetime, base64, uuid, re, binascii, logging, json, pathlib
+import requests, time, urllib.parse, jwt, datetime, base64, uuid, re, binascii, logging, json, pathlib, os
 from dateutil import parser
+from dotenv import load_dotenv
+
+load_dotenv()
 
 log_level = 'WARNING'   ## DEBUG,INFO,WARNING,ERROR,CRITICAL ##
 
@@ -41,7 +44,10 @@ class Workspaces:
     _facet_filters = {
         'assetSecurityPolicies':('policyName','description'),'attributes':('attributeType','attributeValue'),'banners':('banner','port'),'cookies':('cookieName'),'finalIpBlocks':('ipBlock'),'headers':('headerName','headerValue'),'ipBlocks':('ipBlock'),'location':('value,countrycode','value,countryname','value,latitude','value,longitude'),'reputations':('threatType','listName'),'resourceUrls':('url'),'responseHeaders':('headerName','headerValue'),'services':('port','scheme','portStates,value'),'soaRecords':('nameServer','email','serialNumber'),'sslServerConfig':('cipherSuites','tlsVersions'),'webComponents':('name','type','version'),'cveId':('webComponent','name','cvssScore')}
 
-    def __init__(self, tenant_id, subscription_id, client_id, client_secret, workspace_name='', *args, **kwargs) -> None:
+    def __init__(self, tenant_id=os.getenv("TENANT_ID"), subscription_id=os.getenv("SUBSCRIPTION_ID"), client_id=os.getenv("CLIENT_ID"), client_secret=os.getenv("CLIENT_SECRET"), workspace_name=os.getenv("WORKSPACE_NAME"), *args, **kwargs) -> None:
+        if not (tenant_id and subscription_id and client_id and client_secret):
+            logging.error('missing a required argument. check your .env file for missing CLIENT_ID, CLIENT_SECRET, TENANT_ID, and/or SUBSCRIPTION_ID values')
+            raise Exception(f"CLIENT_ID: {client_id}, CLIENT_SECRET: {client_secret}, TENANT_ID: {tenant_id}, SUBSCRIPTION_ID: {subscription_id}")
         self._tenant_id = tenant_id
         self._subscription_id = subscription_id
         self._client_id = client_id

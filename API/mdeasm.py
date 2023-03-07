@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-_VERSION = 1.3.1
+_VERSION = 1.4
 # Created by Josh Randall
 # jorandall@microsoft.com
 # 

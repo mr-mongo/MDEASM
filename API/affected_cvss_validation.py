@@ -1,7 +1,7 @@
 import mdeasm
 from dateutil import parser
 
-easm = mdeasm.Workspaces(workspace_name=mdeasm.workspace_name, tenant_id=mdeasm.tenant_id, subscription_id=mdeasm.subscription_id, client_id=mdeasm.client_id, client_secret=mdeasm.client_secret)
+easm = mdeasm.Workspaces()
 
 # the cvss severity queries that populate the dashboard
 cvss_10 = 'state = confirmed | kind = page | rootUrl = true | (cvssScore = 10 or cvss3BaseScore = 10)'

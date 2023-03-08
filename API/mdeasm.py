@@ -116,7 +116,6 @@ class Workspaces:
     def __set_default_workspace_name__(self, workspace_name):
         self._default_workspace_name = workspace_name
         logging.info(f"default workspace name set: {workspace_name}")
-        return(self._default_workspace_name)
 
     def __verify_workspace__(self, workspace_name):
         if workspace_name not in self._workspaces:
@@ -534,7 +533,13 @@ class Workspaces:
             for workspace in r.json()['value']:
                 self._workspaces[workspace['name']] = f"{workspace['properties']['dataPlaneEndpoint']}{workspace['id'].replace('/providers/Microsoft.Easm','')}"
             logging.info(f"Found workspaces:\n {self._workspaces}")
-        return(self._workspaces)
+        if not self._default_workspace_name:
+            if len(self._workspaces.keys()) == 1:
+                self.__set_default_workspace_name__(next(iter(self._workspaces)))
+            else:
+                print("no WORKSPACE_NAME set in the ENVIRONMENT .env file.\nmake sure to manually set one of the following as the default or provide it as a workspace_name='<XXX>' argument to a subsequent function\n")
+                for k in self._workspaces.keys():
+                    print(f"\t{k}")
 
     def create_workspace(self, resource_group_name, location, workspace_name=''):
         if location not in self._locations:
@@ -1059,7 +1064,7 @@ class Workspaces:
         if self.__verify_workspace__(workspace_name):
             label_endpoint = f"/labels/{name}"
             label_payload = {'properties': {'color':color,'displayName':display_name}}
-            r = self.__workspace_query_helper__('get_workspaces', method='put', endpoint=label_endpoint, payload=label_payload, data_plane=False, workspace_name=workspace_name)
+            r = self.__workspace_query_helper__('create_or_update_label', method='put', endpoint=label_endpoint, payload=label_payload, data_plane=False, workspace_name=workspace_name)
             
             label_properties = {'color':r.json()['properties'].get('color'),'displayName':r.json()['properties'].get('displayName')}
             if kwargs.get('noprint'):
@@ -1076,7 +1081,7 @@ class Workspaces:
             workspace_name = self._default_workspace_name
         if self.__verify_workspace__(workspace_name):
             label_endpoint = f"/labels"
-            r = self.__workspace_query_helper__('get_workspaces', method='get', endpoint=label_endpoint, data_plane=False, workspace_name=workspace_name)
+            r = self.__workspace_query_helper__('get_labels', method='get', endpoint=label_endpoint, data_plane=False, workspace_name=workspace_name)
             
             label_properties = {}
             for label in r.json()['value']:

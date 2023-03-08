@@ -1,6 +1,10 @@
 **version 1.4**, FEB 2023  
 moved to centralized environment mangement  
 adjusted `Workspaces.__init__()` to automatically retrieve ENV variables `TENANT_ID, SUBSCRIPTION_ID, CLIENT_ID, CLIENT_SECRET, WORKSPACE_NAME`  
+renamed `Workspaces._locations` --> `Workspaces._easm_regions`  
+added additional print outputs for `Workspaces.get_workspace_assets()`  
+included `EASM_REGION` and `RESOURCE_GROUP_NAME` from .env and updated `Workspaces.create_workspace()` to use them  
+small edits to mdeasm_notebook.ipynb to use `Workspaces._easm_regions` instead of `Workspaces._locations`
 
 **version 1.3**, FEB 2023  
 added `create_or_update_label()`  

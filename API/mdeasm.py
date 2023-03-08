@@ -56,7 +56,6 @@ class Workspaces:
         self._cp_token = self.__bearer_token__()
         self._dp_token = self.__bearer_token__(data_plane=True)
         self._workspaces = requests.structures.CaseInsensitiveDict()
-        self._expiry = int()
         self.get_workspaces(workspace_name=workspace_name)
 
     def __bearer_token__(self, data_plane=False):
@@ -77,10 +76,10 @@ class Workspaces:
 
     def __token_expiry__(self, token):
         try:
-            self._expiry = jwt.decode(token, options={"verify_signature": False})['exp']
+            expiry = jwt.decode(token, options={"verify_signature": False})['exp']
             now = int(time.time())
-            if now - 30 >= self._expiry:
-                logging.debug(f"{now} - 30 >= {self._expiry}")
+            if now - 30 >= expiry:
+                logging.debug(f"{now} - 30 >= {expiry}")
                 return(True)
             else:
                 return(False)
@@ -531,13 +530,13 @@ class Workspaces:
                 logging.info(f"{workspace_name} not found in subscription {self._subscription_id}")
         else:
             for workspace in r.json()['value']:
-                self._workspaces[workspace['name']] = f"{workspace['properties']['dataPlaneEndpoint']}{workspace['id'].replace('/providers/Microsoft.Easm','')}"
+                self._workspaces[workspace['name']] = (f"{workspace['properties']['dataPlaneEndpoint']}{workspace['id'].replace('/providers/Microsoft.Easm','')}",f"management.azure.com{workspace['id']}")
             logging.info(f"Found workspaces:\n {self._workspaces}")
         if not self._default_workspace_name:
             if len(self._workspaces.keys()) == 1:
                 self.__set_default_workspace_name__(next(iter(self._workspaces)))
             else:
-                print("no WORKSPACE_NAME set in the ENVIRONMENT .env file.\nmake sure to manually set one of the following as the default or provide it as a workspace_name='<XXX>' argument to a subsequent function\n")
+                print("no WORKSPACE_NAME set in the ENVIRONMENT .env file\nmake sure to manually set one of the following as the default or provide it as a workspace_name='<XXX>' argument to a subsequent function\n")
                 for k in self._workspaces.keys():
                     print(f"\t{k}")
 

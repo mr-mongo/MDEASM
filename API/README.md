@@ -20,6 +20,7 @@ python3 -m pip install requests jwt python-dateutil python-dotenv --upgrade
 import mdeasm
 ```
 ```
+#can pass arguments to override or supplement .env defaults
 easm = mdeasm.Workspaces()
 ```
 ### Interact with MDEASM Workspaces

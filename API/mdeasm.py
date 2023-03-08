@@ -47,7 +47,7 @@ class Workspaces:
     def __init__(self, tenant_id=os.getenv("TENANT_ID"), subscription_id=os.getenv("SUBSCRIPTION_ID"), client_id=os.getenv("CLIENT_ID"), client_secret=os.getenv("CLIENT_SECRET"), workspace_name=os.getenv("WORKSPACE_NAME"), *args, **kwargs) -> None:
         if not (tenant_id and subscription_id and client_id and client_secret):
             logging.error('missing a required argument. check your .env file for missing CLIENT_ID, CLIENT_SECRET, TENANT_ID, and/or SUBSCRIPTION_ID values')
-            raise Exception(f"CLIENT_ID: {client_id}, CLIENT_SECRET: {client_secret}, TENANT_ID: {tenant_id}, SUBSCRIPTION_ID: {subscription_id}")
+            raise Exception(f"CLIENT_ID: {client_id}, CLIENT_SECRET: {client_secret[:5] + ('*' * 30)}, TENANT_ID: {tenant_id}, SUBSCRIPTION_ID: {subscription_id}")
         self._tenant_id = tenant_id
         self._subscription_id = subscription_id
         self._client_id = client_id
@@ -657,7 +657,7 @@ class Workspaces:
             logging.error(f"{workspace_name} not found")
             raise Exception(workspace_name)
 
-    def get_workspace_assets(self, query_filter, asset_list_name='', page=0, max_page_size=25, max_page_count=0, get_all=False, auto_create_facet_filters=True, get_recent=True, last_seen_days_back=30, date_range_start='', date_range_end='', workspace_name=''):
+    def get_workspace_assets(self, query_filter, asset_list_name='', page=0, max_page_size=25, max_page_count=0, get_all=False, auto_create_facet_filters=True, get_recent=True, last_seen_days_back=30, date_range_start='', date_range_end='', workspace_name='', **kwargs):
         """query_filter must be a valid MDEASM query, e.g.:
         
             state = "confirmed" AND kind = "domain"
@@ -720,9 +720,14 @@ class Workspaces:
             params = {'filter': query_filter, 'skip': page, 'maxpagesize': max_page_size}
             run_query=True
             page_counter=0
+            time_counter_start=datetime.datetime.now().replace(microsecond=0)
             while run_query:
                 r = self.__workspace_query_helper__('get_workspace_assets', method='get', endpoint='assets', params=params, workspace_name=workspace_name)
-            
+                
+                total_assets = (r.json()['totalPages'] * max_page_size)
+                if page_counter == 0:
+                    print(f"\n{datetime.datetime.now().isoformat()} -- {total_assets} assets identified by query")
+
                 content = []
                 self.__asset_content_helper__(r, content_list=content, asset_list_name=asset_list_name, get_recent=get_recent, last_seen_days_back=last_seen_days_back, date_range_start=date_range_start, date_range_end=date_range_end)
                 
@@ -737,13 +742,21 @@ class Workspaces:
                 else:
                     page = r.json()['number'] + 1
                     params['skip'] = page
+                    
+                    #a counter for tracking and printing assets retrieved and estimated time left until completion
+                    #can be modified by passing kwarg track_every_N_pages=NN (defaults to every 100 pages)
+                    #can disable tracking and printing completely by passing kwarg no_track_time=True
+                    if not (page_counter % kwargs.get('track_every_N_pages', 100) or kwargs.get('no_track_time')):
+                        time_counter_diff = (datetime.datetime.now().replace(microsecond=0) - time_counter_start)
+                        assets_so_far = (page_counter * max_page_size)
+                        
+                        print(f"\nretrieved {assets_so_far} assets in {time_counter_diff}\nestimated time for remaining {total_assets - assets_so_far} assets: {str((time_counter_diff * (total_assets/assets_so_far)) - time_counter_diff).split('.')[0]}")
             
             if auto_create_facet_filters:
                 logging.info(f"auto-creating facet filters for all asset in asset list: {asset_list_name}")
                 self.__facet_filter_helper__(asset_list_name=asset_list_name)
 
-            #print(f"query complete, asset list available at <mdeasm.Workspaces object>.{asset_list_name}.assets")
-            #return(getattr(self, asset_list_name))
+            print(f"\n{datetime.datetime.now().isoformat()} -- query complete")
         else:
             logging.error(f"{workspace_name} not found")
             raise Exception(workspace_name)

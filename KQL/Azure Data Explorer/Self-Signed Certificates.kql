@@ -1,11 +1,11 @@
 let workspace = '{_easm_workspace_name}';
-let lastseen = ago(30d);
+let lastseen = 30d;
 let oldestsnapshot = EasmAsset|where WorkspaceName == workspace|summarize by SnapshotDateTime|sort by SnapshotDateTime asc|take 1;
 EasmSslCertAsset
 |where WorkspaceName == workspace
 |join kind=anti oldestsnapshot on SnapshotDateTime
 |summarize hint.strategy=shuffle arg_max(SnapshotDateTime, *) by AssetUuid
-|where AssetLastSeen > lastseen
+|where AssetLastSeen > ago(lastseen)
 |where IsSelfSigned == true
 |mv-expand SubjectCommonNames
 |extend CommonName = tostring(SubjectCommonNames)
@@ -13,7 +13,7 @@ EasmSslCertAsset
     |where WorkspaceName == workspace
     |join kind=anti oldestsnapshot on SnapshotDateTime
     |summarize hint.strategy=shuffle arg_max(SnapshotDateTime, *) by AssetUuid
-    |where AssetLastSeen > lastseen
+    |where AssetLastSeen > ago(lastseen)
     |mv-expand SslCerts
     |extend HostThumb = tostring(SslCerts)
     |extend SeenOnHost = Host
@@ -23,7 +23,7 @@ EasmSslCertAsset
     |where WorkspaceName == workspace
     |join kind=anti oldestsnapshot on SnapshotDateTime
     |summarize hint.strategy=shuffle arg_max(SnapshotDateTime, *) by AssetUuid
-    |where AssetLastSeen > lastseen
+    |where AssetLastSeen > ago(lastseen)
     |mv-expand SslCerts
     |extend IpThumb = tostring(SslCerts)
     |extend SeenOnIp = IpAddress

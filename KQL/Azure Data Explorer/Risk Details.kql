@@ -1,12 +1,12 @@
 let workspace = '{_easm_workspace_name}';
-let lastseen = ago(30d);
+let lastseen = 30d;
 let oldestsnapshot = EasmAsset|where WorkspaceName == workspace|summarize by SnapshotDateTime|sort by SnapshotDateTime asc|take 1;
 let metric_name_high = '{_easm_risk_finding_high}';
 let metric_name_med = '{_easm_risk_finding_med}';
 let metric_name_low = '{_easm_risk_finding_low}';
 EasmRisk
 |where WorkspaceName == workspace
-|where AssetLastSeen > lastseen
+|where AssetLastSeen > ago(lastseen)
 |where MetricDisplayName in (metric_name_high,metric_name_med,metric_name_low)
 |extend Priority =  case(CategoryName startswith_cs 'High','High',CategoryName startswith_cs 'Medium','Medium','Low')
 |extend PrioNum = case(Priority == 'High',1,Priority == 'Medium',2,3)

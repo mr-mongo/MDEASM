@@ -1,0 +1,40 @@
+let workspace = '{_adx_workspace_name}';
+union isfuzzy=true (
+    EasmHostAsset
+	|where WorkspaceName == workspace
+    |join kind=anti oldestsnapshot on SnapshotDateTime
+    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime, *) by AssetUuid
+    |where AssetLastSeen > lastseen
+    |where array_length(Ports) > 0
+    |extend System = Host
+    |extend Source = 'EasmHostAsset'
+    |mv-expand Ports
+    |extend Port = toint(Ports.Port)
+    |extend LastPortState = tostring(Ports.LastPortState)
+    |extend PortLastSeen = todatetime(Ports.PortStateLastSeen)
+    |where PortLastSeen > lastseen
+    |project System, Port, LastPortState, Source,PortLastSeen
+    ),
+    (
+    EasmIpAddressAsset
+	|where WorkspaceName == workspace
+    |join kind=anti oldestsnapshot on SnapshotDateTime
+    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime, *) by AssetUuid
+    |where AssetLastSeen > lastseen
+    |where array_length(Ports) > 0
+    |extend System = IpAddress
+    |extend Source = 'EasmIpAddressAsset'
+    |mv-expand Ports
+    |extend Port = toint(Ports.Port)
+    |extend LastPortState = tostring(Ports.LastPortState)
+    |extend PortLastSeen = todatetime(Ports.PortStateLastSeen)
+    |where PortLastSeen > lastseen
+    |project System, Port, LastPortState, Source,PortLastSeen
+    )
+|extend Keep = case('{_adx_system_type}' == 'IPs Only', 'EasmIpAddressAsset', '{_adx_system_type}' == 'Hosts Only', 'EasmHostAsset', 'EasmHostAsset,EasmIpAddressAsset')
+|where Keep has Source
+|summarize AllPorts = make_set(Port) by System
+|extend AllPortsSorted = case('{_adx_port_sort}' == 'desc', array_sort_desc(AllPorts), array_sort_asc(AllPorts))
+|project System, AllPortsSorted
+//|summarize AllSystems = make_set(System) by Port
+|sort by System {_adx_port_sort}

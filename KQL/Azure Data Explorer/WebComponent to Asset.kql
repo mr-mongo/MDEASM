@@ -1,0 +1,12 @@
+let workspace = '{_adx_workspace_name}';
+let Name = tostring(parse_json('{_adx_wc_detail}').Name);
+let Version = tostring(parse_json('{_adx_wc_detail}').Version);
+EasmAssetWebComponent
+|where WorkspaceName == workspace
+|join kind=anti oldestsnapshot on SnapshotDateTime
+|summarize hint.strategy=shuffle arg_max(SnapshotDateTime, *) by AssetUuid
+|where AssetLastSeen > lastseen and WebComponentLastSeen > lastseen
+|where WebComponentName == Name and WebComponentVersion == Version
+|extend Category = WebComponentCategory, Name, Version
+|project-keep AssetName,Name,Version,Category,AssetLastSeen
+|project-reorder AssetName,Name,Version,Category,AssetLastSeen

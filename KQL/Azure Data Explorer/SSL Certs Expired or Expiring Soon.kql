@@ -1,0 +1,22 @@
+let workspace = '{_adx_workspace_name}';
+EasmRisk
+|where WorkspaceName == workspace
+|where MetricDisplayName contains "certificates"
+|extend ReversedAuditTrail = array_reverse(AssetDiscoveryAuditTrail)
+|project-away AssetDiscoveryAuditTrail, AssetLastSeen
+|mv-expand ReversedAuditTrail limit 1
+|join kind=inner (EasmSslCertAsset
+    | where WorkspaceName == workspace
+    | where AssetLastSeen > lastseen
+    | where (AssetLastSeen > InvalidAfter or (InvalidAfter > now() and InvalidAfter-30d < now()))
+    | extend Status = iff((AssetLastSeen > InvalidAfter),'Expired','Expiring in 30 days')
+    | extend CertCommonName = strcat_array(SubjectCommonNames,'')
+    | extend CertSha1 = AssetName
+    | project-keep AssetUuid, AssetLastSeen, CertCommonName, CertSha1, InvalidAfter,Status
+    ) on AssetUuid
+|project-keep ReversedAuditTrail,AssetLastSeen,CertCommonName,CertSha1,InvalidAfter,Status
+|extend AssetName = tostring(ReversedAuditTrail.AssetType)
+|project-away ReversedAuditTrail
+|summarize hint.strategy=shuffle arg_max(AssetLastSeen, *) by AssetName,CertCommonName,CertSha1,InvalidAfter,Status
+|order by InvalidAfter asc
+|project-reorder AssetName,Status,InvalidAfter,AssetLastSeen

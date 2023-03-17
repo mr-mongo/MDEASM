@@ -1,0 +1,7 @@
+let workspace = '{_adx_workspace_name}';
+EasmAsset
+|where WorkspaceName == workspace
+|join kind=anti oldestsnapshot on SnapshotDateTime
+|summarize hint.strategy=shuffle arg_max(SnapshotDateTime, *) by AssetUuid
+|extend TotalCount = 'Total'
+|summarize Total=count() by TotalCount

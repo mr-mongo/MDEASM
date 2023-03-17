@@ -1,0 +1,10 @@
+let workspace = '{_adx_workspace_name}';
+EasmAssetWebComponent
+|where WorkspaceName == workspace
+|join kind=anti oldestsnapshot on SnapshotDateTime
+|summarize hint.strategy=shuffle arg_max(SnapshotDateTime, *) by AssetUuid
+|where AssetLastSeen > lastseen and WebComponentLastSeen > lastseen
+|extend Name = WebComponentName, Version = WebComponentVersion
+|project-keep Name,Version,SnapshotDateTime,AssetName
+|summarize Count=count() by Name,Version
+|sort by Count {_adx_wc_sort}

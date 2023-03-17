@@ -1,0 +1,31 @@
+let workspace = '{_adx_workspace_name}';
+EasmSslCertAsset
+|where WorkspaceName == workspace
+|join kind=anti oldestsnapshot on SnapshotDateTime
+|summarize hint.strategy=shuffle arg_max(SnapshotDateTime, *) by AssetUuid
+|where AssetLastSeen > lastseen
+|where IsSelfSigned == true
+|mv-expand SubjectCommonNames
+|extend CommonName = tostring(SubjectCommonNames)
+|join (EasmHostAsset
+    |where WorkspaceName == workspace
+    |join kind=anti oldestsnapshot on SnapshotDateTime
+    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime, *) by AssetUuid
+    |where AssetLastSeen > lastseen
+    |mv-expand SslCerts
+    |extend HostThumb = tostring(SslCerts)
+    |extend SeenOnHost = Host
+    |project-keep SeenOnHost,HostThumb
+) on $left.Thumbprint == $right.HostThumb
+|join (EasmIpAddressAsset
+    |where WorkspaceName == workspace
+    |join kind=anti oldestsnapshot on SnapshotDateTime
+    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime, *) by AssetUuid
+    |where AssetLastSeen > lastseen
+    |mv-expand SslCerts
+    |extend IpThumb = tostring(SslCerts)
+    |extend SeenOnIp = IpAddress
+    |project-keep SeenOnIp,IpThumb
+) on $left.Thumbprint == $right.IpThumb
+|extend Sha1 = Thumbprint
+|project-keep CommonName,SeenOnHost,SeenOnIp,Sha1

@@ -1,0 +1,15 @@
+let workspace = '{_adx_workspace_name}';
+let metric_name_high = '{_adx_risk_finding_high}';
+let metric_name_med = '{_adx_risk_finding_med}';
+let metric_name_low = '{_adx_risk_finding_low}';
+EasmRisk
+|where WorkspaceName == workspace
+|where AssetLastSeen > lastseen
+|where MetricDisplayName in (metric_name_high,metric_name_med,metric_name_low)
+|extend Priority =  case(CategoryName startswith_cs 'High','High',CategoryName startswith_cs 'Medium','Medium','Low')
+|extend PrioNum = case(Priority == 'High',1,Priority == 'Medium',2,3)
+|project-keep AssetName,MetricDisplayName,AssetLastSeen,AssetDescription,Priority,PrioNum
+|summarize hint.strategy=shuffle arg_max(AssetLastSeen, *) by AssetName,MetricDisplayName,AssetDescription,Priority,PrioNum
+|project-reorder Priority,AssetName
+|sort by PrioNum asc
+|project-away PrioNum

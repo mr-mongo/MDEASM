@@ -1,0 +1,9 @@
+let workspace = '{_adx_workspace_name}';
+EasmDomainAsset
+|where WorkspaceName == workspace
+|join kind=anti oldestsnapshot on SnapshotDateTime
+|summarize hint.strategy=shuffle arg_max(SnapshotDateTime, *) by AssetUuid
+|mv-expand RegistrantOrgs 
+|where isnotempty(RegistrantOrgs)
+|extend Org = tostring(RegistrantOrgs)
+|summarize Count=count() by Org

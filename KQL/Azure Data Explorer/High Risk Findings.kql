@@ -1,0 +1,10 @@
+let workspace = '{_adx_workspace_name}';
+EasmRisk
+|where WorkspaceName == workspace
+|where AssetLastSeen > lastseen
+|where CategoryName startswith_cs 'High'
+|extend Priority = 'High'
+|project-keep Priority,MetricDisplayName,SnapshotDateTime,AssetName
+|summarize hint.strategy=shuffle arg_max(SnapshotDateTime, *) by Priority,MetricDisplayName,AssetName
+|summarize Count=count() by Priority,MetricDisplayName
+|order by Count desc 

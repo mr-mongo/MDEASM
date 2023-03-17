@@ -1,0 +1,11 @@
+let workspace = '{_adx_workspace_name}';
+EasmPageAsset
+|where WorkspaceName == workspace
+|join kind=anti oldestsnapshot on SnapshotDateTime
+|summarize hint.strategy=shuffle arg_max(SnapshotDateTime, *) by AssetUuid
+|extend ServicePort = todynamic(array_reverse(split(Service,':')))
+|mv-expand ServicePort limit 1
+|extend ServicePort = tostring(ServicePort)
+|extend Service = case(ServicePort == '443','HTTPS',ServicePort == '80','HTTP','OTHER')
+|summarize Count=count() by ServicePort,Service
+|sort by Count {_adx_page_sort_order}

@@ -1,0 +1,8 @@
+let workspace = '{_adx_workspace_name}';
+EasmHostAsset
+|where WorkspaceName == workspace
+|join kind=anti oldestsnapshot on SnapshotDateTime
+|summarize hint.strategy=shuffle arg_max(SnapshotDateTime, *) by AssetUuid
+|extend Domain = iff(isnotempty(Domain), Domain, Host)
+|summarize Count=count() by Domain
+|sort by Count {_adx_host_sort_order}

@@ -1,0 +1,10 @@
+let workspace = '{_adx_workspace_name}';
+EasmSslCertAsset
+|where WorkspaceName == workspace
+|join kind=anti oldestsnapshot on SnapshotDateTime
+|summarize hint.strategy=shuffle arg_max(SnapshotDateTime, *) by AssetUuid
+|mv-expand IssuerOrganizations
+|where isnotempty(IssuerOrganizations)
+|extend Org = tostring(IssuerOrganizations)
+|summarize Count=count() by Org
+|sort by Count asc

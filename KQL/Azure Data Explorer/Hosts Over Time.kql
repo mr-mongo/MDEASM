@@ -1,0 +1,6 @@
+let workspace = '{_adx_workspace_name}';
+EasmAsset
+|where WorkspaceName == workspace
+|join kind=anti oldestsnapshot on SnapshotDateTime
+|where AssetType == 'HOST'
+|summarize Count=count() by AssetType,SnapshotDateTime

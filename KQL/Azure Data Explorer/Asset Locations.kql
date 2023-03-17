@@ -1,0 +1,17 @@
+let workspace = '{_adx_workspace_name}';
+EasmIpAddressAsset
+|where WorkspaceName == workspace
+|join kind=anti oldestsnapshot on SnapshotDateTime
+|summarize hint.strategy=shuffle arg_max(SnapshotDateTime, *) by AssetUuid
+|where array_length(Locations) > 0
+|union kind=inner (EasmHostAsset
+    |where WorkspaceName == workspace
+    |join kind=anti oldestsnapshot on SnapshotDateTime
+    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime, *) by AssetUuid
+    |where array_length(Locations) > 0)
+|project-keep Locations,AssetName
+|mv-expand Locations
+//|extend Region = tostring(Locations.Region), City = tostring(Locations.City), Latitude = toreal(Locations.Latitude), Longitude = toreal(Locations.Longitude), LocationLastSeen = todatetime(Locations.LastSeen), LocationFirstSeen = todatetime(Locations.FirstSeen)
+|extend Region = tostring(Locations.Region), City = tostring(Locations.City), Latitude = toreal(Locations.Latitude), Longitude = toreal(Locations.Longitude)
+|where isnotempty(Latitude) and isnotempty(Longitude) and isnotempty(Region) and isnotempty(City)
+|summarize Count=count() by Latitude,Longitude,Region,City

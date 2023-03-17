@@ -1,0 +1,9 @@
+let workspace = '{_adx_workspace_name}';
+EasmAssetWebComponent
+|where WorkspaceName == workspace
+|join kind=anti oldestsnapshot on SnapshotDateTime
+|summarize hint.strategy=shuffle arg_max(SnapshotDateTime, *) by AssetUuid
+|where WebComponentCategory == 'CAPTCHA'
+|where WebComponentLastSeen > lastseen
+|project-keep AssetName,WebComponentName,WebComponentFirstSeen,WebComponentLastSeen
+|project-reorder AssetName,WebComponentName

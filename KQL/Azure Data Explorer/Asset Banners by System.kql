@@ -1,0 +1,11 @@
+let workspace = '{_adx_workspace_name}';
+let asset_name = tostring(parse_json('{_adx_port_to_assetlookup}').System);
+EasmAssetBanner
+|where WorkspaceName == workspace
+|join kind=anti oldestsnapshot on SnapshotDateTime
+|where AssetName == asset_name
+|where BannerLastSeen > lastseen
+|summarize hint.strategy=shuffle arg_max(SnapshotDateTime, *) by Port,ScanType,AssetName
+|project-keep AssetName, Port, ScanType, Banner*
+|project-reorder AssetName,Port,ScanType,Banner
+|sort by Port {_adx_port_sort}

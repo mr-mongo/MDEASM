@@ -1,0 +1,12 @@
+let workspace = '{_easm_workspace_name}';
+let lastseen = ago(30d);
+let oldestsnapshot = EasmAsset|where WorkspaceName == workspace|summarize by SnapshotDateTime|sort by SnapshotDateTime asc|take 1;
+EasmSslCertAsset
+|where WorkspaceName == workspace
+|join kind=anti oldestsnapshot on SnapshotDateTime
+|summarize hint.strategy=shuffle arg_max(SnapshotDateTime, *) by AssetUuid
+|mv-expand SubjectOrganizations
+|where isnotempty(SubjectOrganizations)
+|extend Org = tostring(SubjectOrganizations)
+|summarize Count=count() by Org
+|sort by Count asc

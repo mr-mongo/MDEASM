@@ -1,6 +1,0 @@
-let workspace = '';
-EasmAsset
-|where WorkspaceName == workspace
-|summarize hint.strategy=shuffle arg_max(SnapshotDateTime, *) by AssetType,AssetUuid
-|extend TotalCount = 'Total Assets'
-|summarize Total=count() by TotalCount

@@ -1,9 +1,0 @@
-let workspace = '';
-EasmAssetWebComponent
-|where WorkspaceName == workspace
-|where AssetLastSeen > ago(60d) and WebComponentLastSeen > ago(60d)
-|extend Name = WebComponentName, Version = WebComponentVersion
-|project-keep Name,Version,SnapshotDateTime,AssetName
-|summarize hint.strategy=shuffle arg_max(SnapshotDateTime, *) by Name,Version,AssetName
-|summarize Count=count() by Name,Version
-|sort by Count desc

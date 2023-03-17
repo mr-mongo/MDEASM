@@ -19,13 +19,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/7767580b-58a7-4bef-9631-6fa50db100b7')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/b089f8cc-b7e8-4ed1-b94d-9d399cbaca39')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "Asset Types",
-        "body": "let workspace = '{_la_workspace_name}';\nEasmAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|summarize Count=count() by AssetType_s\n|sort by Count desc",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nEasmAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|summarize Count=count() by AssetType_s\n|sort by Count desc",
         "related": {
           "categories": [
             "security"
@@ -44,13 +44,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/852c293b-d752-4d7a-9354-2867a6883182')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/260d3d09-da81-4f2f-a805-1177427df998')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "Asset Count",
-        "body": "let workspace = '{_la_workspace_name}';\nEasmAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|extend TotalCount = 'Total'\n|summarize Total=count() by TotalCount",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nEasmAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|extend TotalCount = 'Total'\n|summarize Total=count() by TotalCount",
         "related": {
           "categories": [
             "security"
@@ -69,13 +69,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/a9990a48-a1d5-484d-bde4-746afe2f2bc1')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/7429b588-06fe-4e7a-87e6-d9e13bca5d1d')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "Asset Types Over Time",
-        "body": "let workspace = '{_la_workspace_name}';\nEasmAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize Count=count() by AssetType_s,SnapshotDateTime_t",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nEasmAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize Count=count() by AssetType_s,SnapshotDateTime_t",
         "related": {
           "categories": [
             "security"
@@ -94,13 +94,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/c3889441-c355-4bb8-92cd-d97454bdb2bf')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/940a8ea4-de1a-4111-a5de-61d1e33330a4')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "Asset Locations",
-        "body": "let workspace = '{_la_workspace_name}';\nEasmIpAddressAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where isnotempty(Locations_s)\n|union kind=inner (EasmHostAsset_CL\n    |where WorkspaceName_s == workspace\n    |where SnapshotDateTime_t != '{_adx_oldest_snapshot}'\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n    |where isnotempty(Locations_s))\n|extend Locations_j = parse_json(Locations_s)\n|project-keep Locations_j,AssetName_s\n|mv-expand Locations_j\n//|extend Region = tostring(Locations_j.Region), City = tostring(Locations_j.City), Latitude = toreal(Locations_j.Latitude), Longitude = toreal(Locations_j.Longitude), LocationLastSeen = todatetime(Locations_j.LastSeen), LocationFirstSeen = todatetime(Locations_j.FirstSeen)\n//|where isnotempty(Latitude) and isnotempty(Longitude) and isnotempty(Region) and isnotempty(City)\n//|project-keep AssetName_s,Region,City,Latitude,Longitude,LocationFirstSeen,LocationLastSeen\n//|summarize hint.strategy=shuffle arg_max(LocationLastSeen, *) by AssetName_s,Region,City,Latitude,Longitude\n//|extend Region = tostring(Locations.Region), City = tostring(Locations.City), Latitude = toreal(Locations.Latitude), Longitude = toreal(Locations.Longitude), LocationLastSeen = todatetime(Locations.LastSeen), LocationFirstSeen = todatetime(Locations.FirstSeen)\n|extend Region = tostring(Locations_j.Region), City = tostring(Locations_j.City), Latitude = toreal(Locations_j.Latitude), Longitude = toreal(Locations_j.Longitude)\n|where isnotempty(Latitude) and isnotempty(Longitude) and isnotempty(Region) and isnotempty(City)\n|summarize Count=count() by Latitude,Longitude,Region,City",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nEasmIpAddressAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where isnotempty(Locations_s)\n|union kind=inner (EasmHostAsset_CL\n    |where WorkspaceName_s == workspace\n    |where SnapshotDateTime_t != '{_adx_oldest_snapshot}'\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n    |where isnotempty(Locations_s))\n|extend Locations_j = parse_json(Locations_s)\n|project-keep Locations_j,AssetName_s\n|mv-expand Locations_j\n//|extend Region = tostring(Locations_j.Region), City = tostring(Locations_j.City), Latitude = toreal(Locations_j.Latitude), Longitude = toreal(Locations_j.Longitude), LocationLastSeen = todatetime(Locations_j.LastSeen), LocationFirstSeen = todatetime(Locations_j.FirstSeen)\n//|where isnotempty(Latitude) and isnotempty(Longitude) and isnotempty(Region) and isnotempty(City)\n//|project-keep AssetName_s,Region,City,Latitude,Longitude,LocationFirstSeen,LocationLastSeen\n//|summarize hint.strategy=shuffle arg_max(LocationLastSeen, *) by AssetName_s,Region,City,Latitude,Longitude\n//|extend Region = tostring(Locations.Region), City = tostring(Locations.City), Latitude = toreal(Locations.Latitude), Longitude = toreal(Locations.Longitude), LocationLastSeen = todatetime(Locations.LastSeen), LocationFirstSeen = todatetime(Locations.FirstSeen)\n|extend Region = tostring(Locations_j.Region), City = tostring(Locations_j.City), Latitude = toreal(Locations_j.Latitude), Longitude = toreal(Locations_j.Longitude)\n|where isnotempty(Latitude) and isnotempty(Longitude) and isnotempty(Region) and isnotempty(City)\n|summarize Count=count() by Latitude,Longitude,Region,City",
         "related": {
           "categories": [
             "security"
@@ -119,13 +119,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/c6a6a4a4-6ac5-4bbf-9fd6-c4806610b17a')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/ca928f6b-9284-46cf-990c-2ba452dc3d3d')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "All Ports_no groupBy",
-        "body": "let workspace = '{_la_workspace_name}';\nunion isfuzzy=true (\n    EasmHostAsset_CL\n\t|where WorkspaceName_s == workspace\n    |join kind=anti oldestsnapshot on SnapshotDateTime_t\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n    |where AssetLastSeen_t > lastseen\n    |where isnotempty(Ports_s)\n    |extend Ports_j = parse_json(Ports_s)\n    |extend System = AssetName_s\n    |extend Source = 'EasmHostAsset_CL'\n    |mv-expand Ports_j\n    |extend Port = todouble(Ports_j.Port), LastPortState = tostring(Ports_j.LastPortState), PortLastSeen = todatetime(Ports_j.PortStateLastSeen)\n    |where PortLastSeen > lastseen\n    |project System, Port, LastPortState, Source, PortLastSeen\n    ),\n    (\n    EasmIpAddressAsset_CL\n\t|where WorkspaceName_s == workspace\n    |join kind=anti oldestsnapshot on SnapshotDateTime_t\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n    |where AssetLastSeen_t > lastseen\n    |where isnotempty(Ports_s)\n    |extend Ports_j = parse_json(Ports_s)\n    |extend System = AssetName_s\n    |extend Source = 'EasmIpAddressAsset_CL'\n    |mv-expand Ports_j\n    |extend Port = todouble(Ports_j.Port), LastPortState = tostring(Ports_j.LastPortState), PortLastSeen = todatetime(Ports_j.PortStateLastSeen)\n    |where PortLastSeen > lastseen\n    |project System, Port, LastPortState, Source, PortLastSeen\n    )\n|extend Keep = case('{_la_system_type}' == 'IPs Only', 'EasmIpAddressAsset_CL', '{_la_system_type}' == 'Hosts Only', 'EasmHostAsset_CL', 'EasmHostAsset_CL,EasmIpAddressAsset_CL')\n|where Keep has Source\n|sort by System {_la_port_sort}, Port {_la_port_sort}\n|project-away Source,Keep\n//|summarize AllPorts = make_set(Port) by System\n//|summarize AllSystems = make_set(System) by Port",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nunion isfuzzy=true (\n    EasmHostAsset_CL\n\t|where WorkspaceName_s == workspace\n    |join kind=anti oldestsnapshot on SnapshotDateTime_t\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n    |where AssetLastSeen_t > lastseen\n    |where isnotempty(Ports_s)\n    |extend Ports_j = parse_json(Ports_s)\n    |extend System = AssetName_s\n    |extend Source = 'EasmHostAsset_CL'\n    |mv-expand Ports_j\n    |extend Port = todouble(Ports_j.Port), LastPortState = tostring(Ports_j.LastPortState), PortLastSeen = todatetime(Ports_j.PortStateLastSeen)\n    |where PortLastSeen > lastseen\n    |project System, Port, LastPortState, Source, PortLastSeen\n    ),\n    (\n    EasmIpAddressAsset_CL\n\t|where WorkspaceName_s == workspace\n    |join kind=anti oldestsnapshot on SnapshotDateTime_t\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n    |where AssetLastSeen_t > lastseen\n    |where isnotempty(Ports_s)\n    |extend Ports_j = parse_json(Ports_s)\n    |extend System = AssetName_s\n    |extend Source = 'EasmIpAddressAsset_CL'\n    |mv-expand Ports_j\n    |extend Port = todouble(Ports_j.Port), LastPortState = tostring(Ports_j.LastPortState), PortLastSeen = todatetime(Ports_j.PortStateLastSeen)\n    |where PortLastSeen > lastseen\n    |project System, Port, LastPortState, Source, PortLastSeen\n    )\n|extend Keep = case('{_easm_system_type}' == 'IPs Only', 'EasmIpAddressAsset_CL', '{_easm_system_type}' == 'Hosts Only', 'EasmHostAsset_CL', 'EasmHostAsset_CL,EasmIpAddressAsset_CL')\n|where Keep has Source\n|sort by System {_easm_port_sort}, Port {_easm_port_sort}\n|project-away Source,Keep\n//|summarize AllPorts = make_set(Port) by System\n//|summarize AllSystems = make_set(System) by Port",
         "related": {
           "categories": [
             "security"
@@ -144,13 +144,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/8156205a-0362-4165-9714-783931f95909')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/17f1adc6-8b90-430b-8e57-584531870acf')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "All Ports_no groupBy_hasBanner",
-        "body": "let workspace = '{_la_workspace_name}';\nunion isfuzzy=true (\n    EasmHostAsset_CL\n\t|where WorkspaceName_s == workspace\n    |join kind=anti oldestsnapshot on SnapshotDateTime_t\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n    |where AssetLastSeen_t > lastseen\n    |where isnotempty(Ports_s)\n    |extend Ports_j = parse_json(Ports_s)\n    |extend System = AssetName_s\n    |extend Source = 'EasmHostAsset_CL'\n    |mv-expand Ports_j\n    |extend Port = todouble(Ports_j.Port), LastPortState = tostring(Ports_j.LastPortState), PortLastSeen = todatetime(Ports_j.PortStateLastSeen)\n    |where PortLastSeen > lastseen\n    |project System, Port, LastPortState, Source, PortLastSeen\n    ),\n    (\n    EasmIpAddressAsset_CL\n\t|where WorkspaceName_s == workspace\n    |join kind=anti oldestsnapshot on SnapshotDateTime_t\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n    |where AssetLastSeen_t > lastseen\n    |where isnotempty(Ports_s)\n    |extend Ports_j = parse_json(Ports_s)\n    |extend System = AssetName_s\n    |extend Source = 'EasmIpAddressAsset_CL'\n    |mv-expand Ports_j\n    |extend Port = todouble(Ports_j.Port), LastPortState = tostring(Ports_j.LastPortState), PortLastSeen = todatetime(Ports_j.PortStateLastSeen)\n    |where PortLastSeen > lastseen\n    |project System, Port, LastPortState, Source, PortLastSeen\n    )\n|extend Keep = case('{_la_system_type}' == 'IPs Only', 'EasmIpAddressAsset_CL', '{_la_system_type}' == 'Hosts Only', 'EasmHostAsset_CL', 'EasmHostAsset_CL,EasmIpAddressAsset_CL')\n|where Keep has Source\n|join (EasmAssetBanner_CL\n    |where WorkspaceName_s == workspace\n    |where BannerLastSeen_t > lastseen\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetName_s,Port_d\n    |project-keep AssetName_s,Port_d\n) on $left.System == $right.AssetName_s, $left.Port == $right.Port_d\n|sort by System {_la_port_sort}, Port {_la_port_sort}\n|project-away Source,Keep,AssetName_s,Port_d\n//|summarize AllPorts = make_set(Port) by System\n//|summarize AllSystems = make_set(System) by Port",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nunion isfuzzy=true (\n    EasmHostAsset_CL\n\t|where WorkspaceName_s == workspace\n    |join kind=anti oldestsnapshot on SnapshotDateTime_t\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n    |where AssetLastSeen_t > lastseen\n    |where isnotempty(Ports_s)\n    |extend Ports_j = parse_json(Ports_s)\n    |extend System = AssetName_s\n    |extend Source = 'EasmHostAsset_CL'\n    |mv-expand Ports_j\n    |extend Port = todouble(Ports_j.Port), LastPortState = tostring(Ports_j.LastPortState), PortLastSeen = todatetime(Ports_j.PortStateLastSeen)\n    |where PortLastSeen > lastseen\n    |project System, Port, LastPortState, Source, PortLastSeen\n    ),\n    (\n    EasmIpAddressAsset_CL\n\t|where WorkspaceName_s == workspace\n    |join kind=anti oldestsnapshot on SnapshotDateTime_t\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n    |where AssetLastSeen_t > lastseen\n    |where isnotempty(Ports_s)\n    |extend Ports_j = parse_json(Ports_s)\n    |extend System = AssetName_s\n    |extend Source = 'EasmIpAddressAsset_CL'\n    |mv-expand Ports_j\n    |extend Port = todouble(Ports_j.Port), LastPortState = tostring(Ports_j.LastPortState), PortLastSeen = todatetime(Ports_j.PortStateLastSeen)\n    |where PortLastSeen > lastseen\n    |project System, Port, LastPortState, Source, PortLastSeen\n    )\n|extend Keep = case('{_easm_system_type}' == 'IPs Only', 'EasmIpAddressAsset_CL', '{_easm_system_type}' == 'Hosts Only', 'EasmHostAsset_CL', 'EasmHostAsset_CL,EasmIpAddressAsset_CL')\n|where Keep has Source\n|join (EasmAssetBanner_CL\n    |where WorkspaceName_s == workspace\n    |where BannerLastSeen_t > lastseen\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetName_s,Port_d\n    |project-keep AssetName_s,Port_d\n) on $left.System == $right.AssetName_s, $left.Port == $right.Port_d\n|sort by System {_easm_port_sort}, Port {_easm_port_sort}\n|project-away Source,Keep,AssetName_s,Port_d\n//|summarize AllPorts = make_set(Port) by System\n//|summarize AllSystems = make_set(System) by Port",
         "related": {
           "categories": [
             "security"
@@ -169,13 +169,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/394edde3-22e4-4f79-8746-1333857fe530')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/a45b1e1b-d498-450a-b05b-f6da32f0681f')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "All Ports_groupBy System",
-        "body": "let workspace = '{_la_workspace_name}';\nunion isfuzzy=true (\n    EasmHostAsset_CL\n\t|where WorkspaceName_s == workspace\n    |join kind=anti oldestsnapshot on SnapshotDateTime_t\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n    |where AssetLastSeen_t > lastseen\n    |where isnotempty(Ports_s)\n    |extend Ports_j = parse_json(Ports_s)\n    |extend System = AssetName_s\n    |extend Source = 'EasmHostAsset_CL'\n    |mv-expand Ports_j\n    |extend Port = toint(Ports_j.Port), LastPortState = tostring(Ports_j.LastPortState), PortLastSeen = todatetime(Ports_j.PortStateLastSeen)\n    |where PortLastSeen > lastseen\n    |project System, Port, LastPortState, Source\n    ),\n    (\n    EasmIpAddressAsset_CL\n\t|where WorkspaceName_s == workspace\n    |join kind=anti oldestsnapshot on SnapshotDateTime_t\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n    |where AssetLastSeen_t > lastseen\n    |where isnotempty(Ports_s)\n    |extend Ports_j = parse_json(Ports_s)\n    |extend System = AssetName_s\n    |extend Source = 'EasmIpAddressAsset_CL'\n    |mv-expand Ports_j\n    |extend Port = toint(Ports_j.Port), LastPortState = tostring(Ports_j.LastPortState), PortLastSeen = todatetime(Ports_j.PortStateLastSeen)\n    |where PortLastSeen > lastseen\n    |project System, Port, LastPortState, Source\n    )\n|extend Keep = case('{_la_system_type}' == 'IPs Only', 'EasmIpAddressAsset_CL', '{_la_system_type}' == 'Hosts Only', 'EasmHostAsset_CL', 'EasmHostAsset_CL,EasmIpAddressAsset_CL')\n|where Keep has Source\n|summarize AllPorts = make_set(Port) by System\n|extend AllPortsSorted = case('{_la_port_sort}' == 'desc', array_sort_desc(AllPorts), array_sort_asc(AllPorts))\n|project System, AllPortsSorted\n//|summarize AllSystems = make_set(System) by Port\n|sort by System {_la_port_sort}",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nunion isfuzzy=true (\n    EasmHostAsset_CL\n\t|where WorkspaceName_s == workspace\n    |join kind=anti oldestsnapshot on SnapshotDateTime_t\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n    |where AssetLastSeen_t > lastseen\n    |where isnotempty(Ports_s)\n    |extend Ports_j = parse_json(Ports_s)\n    |extend System = AssetName_s\n    |extend Source = 'EasmHostAsset_CL'\n    |mv-expand Ports_j\n    |extend Port = toint(Ports_j.Port), LastPortState = tostring(Ports_j.LastPortState), PortLastSeen = todatetime(Ports_j.PortStateLastSeen)\n    |where PortLastSeen > lastseen\n    |project System, Port, LastPortState, Source\n    ),\n    (\n    EasmIpAddressAsset_CL\n\t|where WorkspaceName_s == workspace\n    |join kind=anti oldestsnapshot on SnapshotDateTime_t\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n    |where AssetLastSeen_t > lastseen\n    |where isnotempty(Ports_s)\n    |extend Ports_j = parse_json(Ports_s)\n    |extend System = AssetName_s\n    |extend Source = 'EasmIpAddressAsset_CL'\n    |mv-expand Ports_j\n    |extend Port = toint(Ports_j.Port), LastPortState = tostring(Ports_j.LastPortState), PortLastSeen = todatetime(Ports_j.PortStateLastSeen)\n    |where PortLastSeen > lastseen\n    |project System, Port, LastPortState, Source\n    )\n|extend Keep = case('{_easm_system_type}' == 'IPs Only', 'EasmIpAddressAsset_CL', '{_easm_system_type}' == 'Hosts Only', 'EasmHostAsset_CL', 'EasmHostAsset_CL,EasmIpAddressAsset_CL')\n|where Keep has Source\n|summarize AllPorts = make_set(Port) by System\n|extend AllPortsSorted = case('{_easm_port_sort}' == 'desc', array_sort_desc(AllPorts), array_sort_asc(AllPorts))\n|project System, AllPortsSorted\n//|summarize AllSystems = make_set(System) by Port\n|sort by System {_easm_port_sort}",
         "related": {
           "categories": [
             "security"
@@ -194,13 +194,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/43150ce9-82a3-432f-a623-f0629de7383b')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/949ad490-1b66-4fce-ac4f-0a741acd4b9f')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "All Ports_groupBy System_hasBanner",
-        "body": "let workspace = '{_la_workspace_name}';\nunion isfuzzy=true (\n    EasmHostAsset_CL\n\t|where WorkspaceName_s == workspace\n    |join kind=anti oldestsnapshot on SnapshotDateTime_t\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n    |where AssetLastSeen_t > lastseen\n    |where isnotempty(Ports_s)\n    |extend Ports_j = parse_json(Ports_s)\n    |extend System = AssetName_s\n    |extend Source = 'EasmHostAsset_CL'\n    |mv-expand Ports_j\n    |extend Port = todouble(Ports_j.Port), LastPortState = tostring(Ports_j.LastPortState), PortLastSeen = todatetime(Ports_j.PortStateLastSeen)\n    |where PortLastSeen > lastseen\n    |project System, Port, LastPortState, Source\n    ),\n    (\n    EasmIpAddressAsset_CL\n\t|where WorkspaceName_s == workspace\n    |join kind=anti oldestsnapshot on SnapshotDateTime_t\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n    |where AssetLastSeen_t > lastseen\n    |where isnotempty(Ports_s)\n    |extend Ports_j = parse_json(Ports_s)\n    |extend System = AssetName_s\n    |extend Source = 'EasmIpAddressAsset_CL'\n    |mv-expand Ports_j\n    |extend Port = todouble(Ports_j.Port), LastPortState = tostring(Ports_j.LastPortState), PortLastSeen = todatetime(Ports_j.PortStateLastSeen)\n    |where PortLastSeen > lastseen\n    |project System, Port, LastPortState, Source\n    )\n|extend Keep = case('{_la_system_type}' == 'IPs Only', 'EasmIpAddressAsset_CL', '{_la_system_type}' == 'Hosts Only', 'EasmHostAsset_CL', 'EasmHostAsset_CL,EasmIpAddressAsset_CL')\n|where Keep has Source\n|join (EasmAssetBanner_CL\n    |where WorkspaceName_s == workspace\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g,Port_d,ScanType_s\n    |where BannerLastSeen_t > lastseen\n    |project-keep AssetName_s,Port_d\n) on $left.System == $right.AssetName_s, $left.Port == $right.Port_d\n|summarize AllPorts = make_set(Port) by System\n|extend AllPortsSorted = case('{_la_port_sort}' == 'desc', array_sort_desc(AllPorts), array_sort_asc(AllPorts))\n|project System, AllPortsSorted\n//|summarize AllSystems = make_set(System) by Port\n|sort by System {_la_port_sort}",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nunion isfuzzy=true (\n    EasmHostAsset_CL\n\t|where WorkspaceName_s == workspace\n    |join kind=anti oldestsnapshot on SnapshotDateTime_t\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n    |where AssetLastSeen_t > lastseen\n    |where isnotempty(Ports_s)\n    |extend Ports_j = parse_json(Ports_s)\n    |extend System = AssetName_s\n    |extend Source = 'EasmHostAsset_CL'\n    |mv-expand Ports_j\n    |extend Port = todouble(Ports_j.Port), LastPortState = tostring(Ports_j.LastPortState), PortLastSeen = todatetime(Ports_j.PortStateLastSeen)\n    |where PortLastSeen > lastseen\n    |project System, Port, LastPortState, Source\n    ),\n    (\n    EasmIpAddressAsset_CL\n\t|where WorkspaceName_s == workspace\n    |join kind=anti oldestsnapshot on SnapshotDateTime_t\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n    |where AssetLastSeen_t > lastseen\n    |where isnotempty(Ports_s)\n    |extend Ports_j = parse_json(Ports_s)\n    |extend System = AssetName_s\n    |extend Source = 'EasmIpAddressAsset_CL'\n    |mv-expand Ports_j\n    |extend Port = todouble(Ports_j.Port), LastPortState = tostring(Ports_j.LastPortState), PortLastSeen = todatetime(Ports_j.PortStateLastSeen)\n    |where PortLastSeen > lastseen\n    |project System, Port, LastPortState, Source\n    )\n|extend Keep = case('{_easm_system_type}' == 'IPs Only', 'EasmIpAddressAsset_CL', '{_easm_system_type}' == 'Hosts Only', 'EasmHostAsset_CL', 'EasmHostAsset_CL,EasmIpAddressAsset_CL')\n|where Keep has Source\n|join (EasmAssetBanner_CL\n    |where WorkspaceName_s == workspace\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g,Port_d,ScanType_s\n    |where BannerLastSeen_t > lastseen\n    |project-keep AssetName_s,Port_d\n) on $left.System == $right.AssetName_s, $left.Port == $right.Port_d\n|summarize AllPorts = make_set(Port) by System\n|extend AllPortsSorted = case('{_easm_port_sort}' == 'desc', array_sort_desc(AllPorts), array_sort_asc(AllPorts))\n|project System, AllPortsSorted\n//|summarize AllSystems = make_set(System) by Port\n|sort by System {_easm_port_sort}",
         "related": {
           "categories": [
             "security"
@@ -219,13 +219,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/f5bbd2ef-12cb-4d22-97d6-d1ac8dac3257')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/f1785bcd-dbaf-41f2-bb49-fa9df83c2125')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "All Ports_groupBy Port",
-        "body": "let workspace = '{_la_workspace_name}';\nunion isfuzzy=true (\n    EasmHostAsset_CL\n\t|where WorkspaceName_s == workspace\n    |join kind=anti oldestsnapshot on SnapshotDateTime_t\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n    |where AssetLastSeen_t > lastseen\n    |where isnotempty(Ports_s)\n    |extend Ports_j = parse_json(Ports_s)\n    |extend System = AssetName_s\n    |extend Source = 'EasmHostAsset_CL'\n    |mv-expand Ports_j\n    |extend Port = toint(Ports_j.Port), LastPortState = tostring(Ports_j.LastPortState), PortLastSeen = todatetime(Ports_j.PortStateLastSeen)\n    |where PortLastSeen > lastseen\n    |project System, Port, LastPortState, Source\n    ),\n    (\n    EasmIpAddressAsset_CL\n\t|where WorkspaceName_s == workspace\n    |join kind=anti oldestsnapshot on SnapshotDateTime_t\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n    |where AssetLastSeen_t > lastseen\n    |where isnotempty(Ports_s)\n    |extend Ports_j = parse_json(Ports_s)\n    |extend System = AssetName_s\n    |extend Source = 'EasmIpAddressAsset_CL'\n    |mv-expand Ports_j\n    |extend Port = toint(Ports_j.Port), LastPortState = tostring(Ports_j.LastPortState), PortLastSeen = todatetime(Ports_j.PortStateLastSeen)\n    |where PortLastSeen > lastseen\n    |project System, Port, LastPortState, Source\n    )\n|extend Keep = case('{_la_system_type}' == 'IPs Only', 'EasmIpAddressAsset_CL', '{_la_system_type}' == 'Hosts Only', 'EasmHostAsset_CL', 'EasmHostAsset_CL,EasmIpAddressAsset_CL')\n|where Keep has Source\n//|summarize AllPorts = make_set(Port) by System\n|summarize AllSystems = make_set(System) by Port\n|extend AllSystemsSorted = case('{_la_port_sort}' == 'desc', array_sort_desc(AllSystems),array_sort_asc(AllSystems))\n|project Port, AllSystemsSorted\n|sort by Port {_la_port_sort}",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nunion isfuzzy=true (\n    EasmHostAsset_CL\n\t|where WorkspaceName_s == workspace\n    |join kind=anti oldestsnapshot on SnapshotDateTime_t\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n    |where AssetLastSeen_t > lastseen\n    |where isnotempty(Ports_s)\n    |extend Ports_j = parse_json(Ports_s)\n    |extend System = AssetName_s\n    |extend Source = 'EasmHostAsset_CL'\n    |mv-expand Ports_j\n    |extend Port = toint(Ports_j.Port), LastPortState = tostring(Ports_j.LastPortState), PortLastSeen = todatetime(Ports_j.PortStateLastSeen)\n    |where PortLastSeen > lastseen\n    |project System, Port, LastPortState, Source\n    ),\n    (\n    EasmIpAddressAsset_CL\n\t|where WorkspaceName_s == workspace\n    |join kind=anti oldestsnapshot on SnapshotDateTime_t\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n    |where AssetLastSeen_t > lastseen\n    |where isnotempty(Ports_s)\n    |extend Ports_j = parse_json(Ports_s)\n    |extend System = AssetName_s\n    |extend Source = 'EasmIpAddressAsset_CL'\n    |mv-expand Ports_j\n    |extend Port = toint(Ports_j.Port), LastPortState = tostring(Ports_j.LastPortState), PortLastSeen = todatetime(Ports_j.PortStateLastSeen)\n    |where PortLastSeen > lastseen\n    |project System, Port, LastPortState, Source\n    )\n|extend Keep = case('{_easm_system_type}' == 'IPs Only', 'EasmIpAddressAsset_CL', '{_easm_system_type}' == 'Hosts Only', 'EasmHostAsset_CL', 'EasmHostAsset_CL,EasmIpAddressAsset_CL')\n|where Keep has Source\n//|summarize AllPorts = make_set(Port) by System\n|summarize AllSystems = make_set(System) by Port\n|extend AllSystemsSorted = case('{_easm_port_sort}' == 'desc', array_sort_desc(AllSystems),array_sort_asc(AllSystems))\n|project Port, AllSystemsSorted\n|sort by Port {_easm_port_sort}",
         "related": {
           "categories": [
             "security"
@@ -244,13 +244,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/3b909082-9cce-44d0-bd88-640bf07ff0e5')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/e9b544a7-c5c4-4a60-b090-85c6ad7d0457')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "All Ports_groupBy Port_hasBanner",
-        "body": "let workspace = '{_la_workspace_name}';\nunion isfuzzy=true (\n    EasmHostAsset_CL\n\t|where WorkspaceName_s == workspace\n    |join kind=anti oldestsnapshot on SnapshotDateTime_t\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n    |where AssetLastSeen_t > lastseen\n    |where isnotempty(Ports_s)\n    |extend Ports_j = parse_json(Ports_s)\n    |extend System = AssetName_s\n    |extend Source = 'EasmHostAsset_CL'\n    |mv-expand Ports_j\n    |extend Port = todouble(Ports_j.Port), LastPortState = tostring(Ports_j.LastPortState), PortLastSeen = todatetime(Ports_j.PortStateLastSeen)\n    |where PortLastSeen > lastseen\n    |project System, Port, LastPortState, Source\n    ),\n    (\n    EasmIpAddressAsset_CL\n\t|where WorkspaceName_s == workspace\n    |join kind=anti oldestsnapshot on SnapshotDateTime_t\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n    |where AssetLastSeen_t > lastseen\n    |where isnotempty(Ports_s)\n    |extend Ports_j = parse_json(Ports_s)\n    |extend System = AssetName_s\n    |extend Source = 'EasmIpAddressAsset_CL'\n    |mv-expand Ports_j\n    |extend Port = todouble(Ports_j.Port), LastPortState = tostring(Ports_j.LastPortState), PortLastSeen = todatetime(Ports_j.PortStateLastSeen)\n    |where PortLastSeen > lastseen\n    |project System, Port, LastPortState, Source\n    )\n|extend Keep = case('{_la_system_type}' == 'IPs Only', 'EasmIpAddressAsset_CL', '{_la_system_type}' == 'Hosts Only', 'EasmHostAsset_CL', 'EasmHostAsset_CL,EasmIpAddressAsset_CL')\n|where Keep has Source\n|join (EasmAssetBanner_CL\n    |where WorkspaceName_s == workspace\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g,Port_d,ScanType_s\n    |where BannerLastSeen_t > lastseen\n    |project-keep AssetName_s,Port_d\n) on $left.System == $right.AssetName_s, $left.Port == $right.Port_d\n//|summarize AllPorts = make_set(Port) by System\n|summarize AllSystems = make_set(System) by Port\n|extend AllSystemsSorted = case('{_la_port_sort}' == 'desc', array_sort_desc(AllSystems),array_sort_asc(AllSystems))\n|project Port, AllSystemsSorted\n|sort by Port {_la_port_sort}",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nunion isfuzzy=true (\n    EasmHostAsset_CL\n\t|where WorkspaceName_s == workspace\n    |join kind=anti oldestsnapshot on SnapshotDateTime_t\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n    |where AssetLastSeen_t > lastseen\n    |where isnotempty(Ports_s)\n    |extend Ports_j = parse_json(Ports_s)\n    |extend System = AssetName_s\n    |extend Source = 'EasmHostAsset_CL'\n    |mv-expand Ports_j\n    |extend Port = todouble(Ports_j.Port), LastPortState = tostring(Ports_j.LastPortState), PortLastSeen = todatetime(Ports_j.PortStateLastSeen)\n    |where PortLastSeen > lastseen\n    |project System, Port, LastPortState, Source\n    ),\n    (\n    EasmIpAddressAsset_CL\n\t|where WorkspaceName_s == workspace\n    |join kind=anti oldestsnapshot on SnapshotDateTime_t\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n    |where AssetLastSeen_t > lastseen\n    |where isnotempty(Ports_s)\n    |extend Ports_j = parse_json(Ports_s)\n    |extend System = AssetName_s\n    |extend Source = 'EasmIpAddressAsset_CL'\n    |mv-expand Ports_j\n    |extend Port = todouble(Ports_j.Port), LastPortState = tostring(Ports_j.LastPortState), PortLastSeen = todatetime(Ports_j.PortStateLastSeen)\n    |where PortLastSeen > lastseen\n    |project System, Port, LastPortState, Source\n    )\n|extend Keep = case('{_easm_system_type}' == 'IPs Only', 'EasmIpAddressAsset_CL', '{_easm_system_type}' == 'Hosts Only', 'EasmHostAsset_CL', 'EasmHostAsset_CL,EasmIpAddressAsset_CL')\n|where Keep has Source\n|join (EasmAssetBanner_CL\n    |where WorkspaceName_s == workspace\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g,Port_d,ScanType_s\n    |where BannerLastSeen_t > lastseen\n    |project-keep AssetName_s,Port_d\n) on $left.System == $right.AssetName_s, $left.Port == $right.Port_d\n//|summarize AllPorts = make_set(Port) by System\n|summarize AllSystems = make_set(System) by Port\n|extend AllSystemsSorted = case('{_easm_port_sort}' == 'desc', array_sort_desc(AllSystems),array_sort_asc(AllSystems))\n|project Port, AllSystemsSorted\n|sort by Port {_easm_port_sort}",
         "related": {
           "categories": [
             "security"
@@ -269,13 +269,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/14acb576-a1e5-4a3f-bc0e-dbd92205cade')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/486d2b02-28b3-4f64-9ff9-2909b1c745e7')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "Asset Banners by System",
-        "body": "let workspace = '{_la_workspace_name}';\nlet asset_name = tostring(parse_json('{_la_port_to_assetlookup}').System);\nEasmAssetBanner_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|where AssetName_s == asset_name\n|where BannerLastSeen_t > lastseen\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by Port_d,ScanType_s\n|project-keep AssetName_s, Port_d, ScanType_s, Banner*\n|project-reorder AssetName_s,Port_d,ScanType_s,Banner_s\n|sort by Port_d {_la_port_sort}",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nlet asset_name = tostring(parse_json('{_easm_port_to_assetlookup}').System);\nEasmAssetBanner_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|where AssetName_s == asset_name\n|where BannerLastSeen_t > lastseen\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by Port_d,ScanType_s\n|project-keep AssetName_s, Port_d, ScanType_s, Banner*\n|project-reorder AssetName_s,Port_d,ScanType_s,Banner_s\n|sort by Port_d {_easm_port_sort}",
         "related": {
           "categories": [
             "security"
@@ -294,13 +294,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/28fdbfda-2e6f-4e6d-b19c-9e3078c87b2d')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/28e56abd-8a67-435e-8d38-68f6a7d81bf0')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "Asset Banners by Port",
-        "body": "let workspace = '{_la_workspace_name}';\nlet port_num = replace_regex('{_la_port_to_portlookup}', @'.+Port\":(\\d+).+', @'\\1');\nEasmAssetBanner_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|where Port_d == port_num\n|where BannerLastSeen_t > lastseen\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetName_s,ScanType_s\n|project-keep AssetName_s, Port_d, ScanType_s, Banner*\n|project-reorder AssetName_s,Port_d,ScanType_s,Banner_s\n|sort by AssetName_s {_la_port_sort}",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nlet port_num = replace_regex('{_easm_port_to_portlookup}', @'.+Port\":(\\d+).+', @'\\1');\nEasmAssetBanner_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|where Port_d == port_num\n|where BannerLastSeen_t > lastseen\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetName_s,ScanType_s\n|project-keep AssetName_s, Port_d, ScanType_s, Banner*\n|project-reorder AssetName_s,Port_d,ScanType_s,Banner_s\n|sort by AssetName_s {_easm_port_sort}",
         "related": {
           "categories": [
             "security"
@@ -319,13 +319,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/d2d5c451-87e1-4bf2-9792-770fa1abb944')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/1644c126-c99e-437e-9358-c6120e07130a')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "Web Components",
-        "body": "let workspace = '{_la_workspace_name}';\nEasmAssetWebComponent_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where AssetLastSeen_t > lastseen and WebComponentLastSeen_t > lastseen\n|extend Name = WebComponentName_s, Version = WebComponentVersion_s\n|project-keep Name,Version\n|summarize Count=count() by Name,Version\n|sort by Count {_la_wc_sort}",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nEasmAssetWebComponent_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where AssetLastSeen_t > lastseen and WebComponentLastSeen_t > lastseen\n|extend Name = WebComponentName_s, Version = WebComponentVersion_s\n|project-keep Name,Version\n|summarize Count=count() by Name,Version\n|sort by Count {_easm_wc_sort}",
         "related": {
           "categories": [
             "security"
@@ -344,13 +344,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/1a6a4155-0d3a-4b37-acbe-d41a014276d4')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/fa78c781-45b1-48b9-b540-7fc59e5317a8')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "WebComponent to Asset",
-        "body": "let workspace = '{_la_workspace_name}';\nlet Name = tostring(parse_json('{_la_wc_detail}').Name);\nlet Version = tostring(parse_json('{_la_wc_detail}').Version);\nEasmAssetWebComponent_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where AssetLastSeen_t > lastseen and WebComponentLastSeen_t > lastseen\n|where WebComponentName_s == Name and WebComponentVersion_s == Version\n|extend Category = WebComponentCategory_s, Name, Version\n|project-keep AssetName_s,Name,Version,Category,AssetLastSeen_t\n|project-reorder AssetName_s,Name,Version,Category,AssetLastSeen_t",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nlet Name = tostring(parse_json('{_easm_wc_detail}').Name);\nlet Version = tostring(parse_json('{_easm_wc_detail}').Version);\nEasmAssetWebComponent_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where AssetLastSeen_t > lastseen and WebComponentLastSeen_t > lastseen\n|where WebComponentName_s == Name and WebComponentVersion_s == Version\n|extend Category = WebComponentCategory_s, Name, Version\n|project-keep AssetName_s,Name,Version,Category,AssetLastSeen_t\n|project-reorder AssetName_s,Name,Version,Category,AssetLastSeen_t",
         "related": {
           "categories": [
             "security"
@@ -369,13 +369,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/5a6f1cf9-dee9-4deb-b29d-b4ba764bcac6')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/8af7fec0-64f4-4614-a639-171f1561335f')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "High Risk Findings",
-        "body": "let workspace = '{_la_workspace_name}';\nEasmRisk_CL\n|where WorkspaceName_s == workspace\n|where AssetLastSeen_t > lastseen\n|where CategoryName_s startswith_cs 'High'\n|extend Priority = 'High'\n|project-keep Priority,MetricDisplayName_s,SnapshotDateTime_t,AssetName_s\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by Priority,MetricDisplayName_s,AssetName_s\n|summarize Count=count() by Priority,MetricDisplayName_s\n|order by Count desc ",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nEasmRisk_CL\n|where WorkspaceName_s == workspace\n|where AssetLastSeen_t > lastseen\n|where CategoryName_s startswith_cs 'High'\n|extend Priority = 'High'\n|project-keep Priority,MetricDisplayName_s,SnapshotDateTime_t,AssetName_s\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by Priority,MetricDisplayName_s,AssetName_s\n|summarize Count=count() by Priority,MetricDisplayName_s\n|order by Count desc ",
         "related": {
           "categories": [
             "security"
@@ -394,13 +394,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/0e4e621a-29ac-4db3-b6ea-26b6732bb236')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/0b1d7f5c-b507-4f98-8fd7-cbc3b2e1242d')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "Medium Risk Findings",
-        "body": "let workspace = '{_la_workspace_name}';\nEasmRisk_CL\n|where WorkspaceName_s == workspace\n|where AssetLastSeen_t > lastseen\n|where CategoryName_s startswith_cs 'Medium'\n|extend Priority = 'Medium'\n|project-keep Priority,MetricDisplayName_s,SnapshotDateTime_t,AssetName_s\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by Priority,MetricDisplayName_s,AssetName_s\n|summarize Count=count() by Priority,MetricDisplayName_s\n|order by Count desc ",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nEasmRisk_CL\n|where WorkspaceName_s == workspace\n|where AssetLastSeen_t > lastseen\n|where CategoryName_s startswith_cs 'Medium'\n|extend Priority = 'Medium'\n|project-keep Priority,MetricDisplayName_s,SnapshotDateTime_t,AssetName_s\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by Priority,MetricDisplayName_s,AssetName_s\n|summarize Count=count() by Priority,MetricDisplayName_s\n|order by Count desc ",
         "related": {
           "categories": [
             "security"
@@ -419,13 +419,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/8bbc0adb-e643-480d-af3f-745d4fa12ceb')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/5fc90e31-4f81-4628-804f-d98262de6d83')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "Low Risk Findings",
-        "body": "let workspace = '{_la_workspace_name}';\nEasmRisk_CL\n|where WorkspaceName_s == workspace\n|where AssetLastSeen_t > lastseen\n|where CategoryName_s startswith_cs 'Low'\n|extend Priority = 'Low'\n|project-keep Priority,MetricDisplayName_s,SnapshotDateTime_t,AssetName_s\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by Priority,MetricDisplayName_s,AssetName_s\n|summarize Count=count() by Priority,MetricDisplayName_s\n|order by Count desc ",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nEasmRisk_CL\n|where WorkspaceName_s == workspace\n|where AssetLastSeen_t > lastseen\n|where CategoryName_s startswith_cs 'Low'\n|extend Priority = 'Low'\n|project-keep Priority,MetricDisplayName_s,SnapshotDateTime_t,AssetName_s\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by Priority,MetricDisplayName_s,AssetName_s\n|summarize Count=count() by Priority,MetricDisplayName_s\n|order by Count desc ",
         "related": {
           "categories": [
             "security"
@@ -444,13 +444,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/17a3cedc-87da-4b89-83f6-68dc34dc3daf')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/715b4136-0f86-4bed-b125-731b1cf0cd3b')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "Risk Details",
-        "body": "let workspace = '{_la_workspace_name}';\nlet metric_name_high = '{_la_risk_finding_high}';\nlet metric_name_med = '{_la_risk_finding_medium}';\nlet metric_name_low = '{_la_risk_finding_low}';\nEasmRisk_CL\n|where WorkspaceName_s == workspace\n|where AssetLastSeen_t > lastseen\n|where MetricDisplayName_s in (metric_name_high,metric_name_med,metric_name_low)\n|extend Priority =  case(CategoryName_s startswith_cs 'High','High',CategoryName_s startswith_cs 'Medium','Medium','Low')\n|extend PrioNum = case(Priority == 'High',1,Priority == 'Medium',2,3)\n|project-keep AssetName_s,MetricDisplayName_s,AssetLastSeen_t,AssetDescription_s,Priority,PrioNum\n|summarize hint.strategy=shuffle arg_max(AssetLastSeen_t, *) by AssetName_s,MetricDisplayName_s,AssetDescription_s,Priority,PrioNum\n|project-reorder Priority,AssetName_s\n|sort by PrioNum asc\n|project-away PrioNum",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nlet metric_name_high = '{_easm_risk_finding_high}';\nlet metric_name_med = '{_easm_risk_finding_medium}';\nlet metric_name_low = '{_easm_risk_finding_low}';\nEasmRisk_CL\n|where WorkspaceName_s == workspace\n|where AssetLastSeen_t > lastseen\n|where MetricDisplayName_s in (metric_name_high,metric_name_med,metric_name_low)\n|extend Priority =  case(CategoryName_s startswith_cs 'High','High',CategoryName_s startswith_cs 'Medium','Medium','Low')\n|extend PrioNum = case(Priority == 'High',1,Priority == 'Medium',2,3)\n|project-keep AssetName_s,MetricDisplayName_s,AssetLastSeen_t,AssetDescription_s,Priority,PrioNum\n|summarize hint.strategy=shuffle arg_max(AssetLastSeen_t, *) by AssetName_s,MetricDisplayName_s,AssetDescription_s,Priority,PrioNum\n|project-reorder Priority,AssetName_s\n|sort by PrioNum asc\n|project-away PrioNum",
         "related": {
           "categories": [
             "security"
@@ -469,13 +469,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/f53328b6-3ec8-4213-a96c-6514e94ad0a1')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/8037b651-9611-40a2-95c2-a132bcff39e1')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "Assets With CVEs_no groupBy",
-        "body": "let workspace = '{_la_workspace_name}';\nlet cvssscore = {_la_cvssscore};\nlet cvss3score = {_la_cvss3score};\nEasmAssetWebComponent_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|where isnotempty(WebComponentCves_s)\n|where WebComponentLastSeen_t > lastseen\n|extend WebComponentCves_j = parse_json(WebComponentCves_s)\n|mv-expand WebComponentCves_j\n|extend Cve = tostring(WebComponentCves_j.Cve), Cwe = tostring(WebComponentCves_j.Cwe), CvssScore = tolong(WebComponentCves_j.CvssScore), Cvss3Score = toreal(WebComponentCves_j.Cvss3Score)\n|where (CvssScore >= cvssscore or Cvss3Score >= cvss3score)\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g,WebComponentName_s,WebComponentVersion_s,Cve\n|project-keep WebComponentCategory_s,WebComponentName_s,WebComponentVersion_s,Cve,Cwe,CvssScore,Cvss3Score,AssetName_s,WebComponentLastSeen_t\n|project-reorder AssetName_s,WebComponentName_s,WebComponentVersion_s,Cve,CvssScore,Cvss3Score,Cwe\n|sort by WebComponentLastSeen_t desc\n//|summarize Asset = make_list(pack_all()) by AssetName_s\n//|summarize CVE = make_list(pack_all()) by Cve\n//|summarize WebComponent = make_list(pack_all()) by WebComponentName_s,WebComponentVersion_s",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nlet cvssscore = {_easm_cvssscore};\nlet cvss3score = {_easm_cvss3score};\nEasmAssetWebComponent_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|where isnotempty(WebComponentCves_s)\n|where WebComponentLastSeen_t > lastseen\n|extend WebComponentCves_j = parse_json(WebComponentCves_s)\n|mv-expand WebComponentCves_j\n|extend Cve = tostring(WebComponentCves_j.Cve), Cwe = tostring(WebComponentCves_j.Cwe), CvssScore = tolong(WebComponentCves_j.CvssScore), Cvss3Score = toreal(WebComponentCves_j.Cvss3Score)\n|where (CvssScore >= cvssscore or Cvss3Score >= cvss3score)\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g,WebComponentName_s,WebComponentVersion_s,Cve\n|project-keep WebComponentCategory_s,WebComponentName_s,WebComponentVersion_s,Cve,Cwe,CvssScore,Cvss3Score,AssetName_s,WebComponentLastSeen_t\n|project-reorder AssetName_s,WebComponentName_s,WebComponentVersion_s,Cve,CvssScore,Cvss3Score,Cwe\n|sort by WebComponentLastSeen_t desc\n//|summarize Asset = make_list(pack_all()) by AssetName_s\n//|summarize CVE = make_list(pack_all()) by Cve\n//|summarize WebComponent = make_list(pack_all()) by WebComponentName_s,WebComponentVersion_s",
         "related": {
           "categories": [
             "security"
@@ -494,13 +494,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/9e9f36f4-2e4a-4547-a305-ba054319119c')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/8623b0ea-3814-4eee-9d79-fd196ab5a0a9')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "Assets With CVEs_groupBy AssetName",
-        "body": "let workspace = '{_la_workspace_name}';\nlet cvssscore = {_la_cvssscore};\nlet cvss3score = {_la_cvss3score};\nEasmAssetWebComponent_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|where isnotempty(WebComponentCves_s)\n|where WebComponentLastSeen_t > lastseen\n|extend WebComponentCves_j = parse_json(WebComponentCves_s)\n|mv-expand WebComponentCves_j\n|extend Cve = tostring(WebComponentCves_j.Cve), Cwe = tostring(WebComponentCves_j.Cwe), CvssScore = tolong(WebComponentCves_j.CvssScore), Cvss3Score = toreal(WebComponentCves_j.Cvss3Score)\n|where (CvssScore >= cvssscore or Cvss3Score >= cvss3score)\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g,WebComponentName_s,WebComponentVersion_s,Cve\n|project-keep WebComponentCategory_s,WebComponentName_s,WebComponentVersion_s,Cve,Cwe,CvssScore,Cvss3Score,AssetName_s,WebComponentLastSeen_t\n//|project-reorder AssetName_s,WebComponentName_s,WebComponentVersion_s,Cve,CvssScore,Cvss3Score,Cwe\n//|sort by WebComponentLastSeen_t desc\n|summarize Asset = make_list(pack_all()) by AssetName_s\n//|summarize CVE = make_list(pack_all()) by Cve\n//|summarize WebComponent = make_list(pack_all()) by WebComponentName_s,WebComponentVersion_s",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nlet cvssscore = {_easm_cvssscore};\nlet cvss3score = {_easm_cvss3score};\nEasmAssetWebComponent_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|where isnotempty(WebComponentCves_s)\n|where WebComponentLastSeen_t > lastseen\n|extend WebComponentCves_j = parse_json(WebComponentCves_s)\n|mv-expand WebComponentCves_j\n|extend Cve = tostring(WebComponentCves_j.Cve), Cwe = tostring(WebComponentCves_j.Cwe), CvssScore = tolong(WebComponentCves_j.CvssScore), Cvss3Score = toreal(WebComponentCves_j.Cvss3Score)\n|where (CvssScore >= cvssscore or Cvss3Score >= cvss3score)\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g,WebComponentName_s,WebComponentVersion_s,Cve\n|project-keep WebComponentCategory_s,WebComponentName_s,WebComponentVersion_s,Cve,Cwe,CvssScore,Cvss3Score,AssetName_s,WebComponentLastSeen_t\n//|project-reorder AssetName_s,WebComponentName_s,WebComponentVersion_s,Cve,CvssScore,Cvss3Score,Cwe\n//|sort by WebComponentLastSeen_t desc\n|summarize Asset = make_list(pack_all()) by AssetName_s\n//|summarize CVE = make_list(pack_all()) by Cve\n//|summarize WebComponent = make_list(pack_all()) by WebComponentName_s,WebComponentVersion_s",
         "related": {
           "categories": [
             "security"
@@ -519,13 +519,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/f85d5df4-dfc7-41b0-aabb-448cdca6cce9')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/959f1283-e80b-498c-9137-884f7c1eb514')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "Assets With CVEs_groupBy Cve",
-        "body": "let workspace = '{_la_workspace_name}';\nlet cvssscore = {_la_cvssscore};\nlet cvss3score = {_la_cvss3score};\nEasmAssetWebComponent_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|where isnotempty(WebComponentCves_s)\n|where WebComponentLastSeen_t > lastseen\n|extend WebComponentCves_j = parse_json(WebComponentCves_s)\n|mv-expand WebComponentCves_j\n|extend Cve = tostring(WebComponentCves_j.Cve), Cwe = tostring(WebComponentCves_j.Cwe), CvssScore = tolong(WebComponentCves_j.CvssScore), Cvss3Score = toreal(WebComponentCves_j.Cvss3Score)\n|where (CvssScore >= cvssscore or Cvss3Score >= cvss3score)\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g,WebComponentName_s,WebComponentVersion_s,Cve\n|project-keep WebComponentCategory_s,WebComponentName_s,WebComponentVersion_s,Cve,Cwe,CvssScore,Cvss3Score,AssetName_s,WebComponentLastSeen_t\n//|project-reorder AssetName_s,WebComponentName_s,WebComponentVersion_s,Cve,CvssScore,Cvss3Score,Cwe\n//|sort by WebComponentLastSeen_t desc\n//|summarize Asset = make_list(pack_all()) by AssetName_s\n|summarize CVE = make_list(pack_all()) by Cve\n//|summarize WebComponent = make_list(pack_all()) by WebComponentName_s,WebComponentVersion_s",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nlet cvssscore = {_easm_cvssscore};\nlet cvss3score = {_easm_cvss3score};\nEasmAssetWebComponent_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|where isnotempty(WebComponentCves_s)\n|where WebComponentLastSeen_t > lastseen\n|extend WebComponentCves_j = parse_json(WebComponentCves_s)\n|mv-expand WebComponentCves_j\n|extend Cve = tostring(WebComponentCves_j.Cve), Cwe = tostring(WebComponentCves_j.Cwe), CvssScore = tolong(WebComponentCves_j.CvssScore), Cvss3Score = toreal(WebComponentCves_j.Cvss3Score)\n|where (CvssScore >= cvssscore or Cvss3Score >= cvss3score)\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g,WebComponentName_s,WebComponentVersion_s,Cve\n|project-keep WebComponentCategory_s,WebComponentName_s,WebComponentVersion_s,Cve,Cwe,CvssScore,Cvss3Score,AssetName_s,WebComponentLastSeen_t\n//|project-reorder AssetName_s,WebComponentName_s,WebComponentVersion_s,Cve,CvssScore,Cvss3Score,Cwe\n//|sort by WebComponentLastSeen_t desc\n//|summarize Asset = make_list(pack_all()) by AssetName_s\n|summarize CVE = make_list(pack_all()) by Cve\n//|summarize WebComponent = make_list(pack_all()) by WebComponentName_s,WebComponentVersion_s",
         "related": {
           "categories": [
             "security"
@@ -544,13 +544,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/df9165f1-21d6-4698-a875-70ea99311a9b')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/edc6bde5-894f-427d-91f7-810c19554194')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "Assets With CVEs_groupBy WebComponent",
-        "body": "let workspace = '{_la_workspace_name}';\nlet cvssscore = {_la_cvssscore};\nlet cvss3score = {_la_cvss3score};\nEasmAssetWebComponent_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|where isnotempty(WebComponentCves_s)\n|where WebComponentLastSeen_t > lastseen\n|extend WebComponentCves_j = parse_json(WebComponentCves_s)\n|mv-expand WebComponentCves_j\n|extend Cve = tostring(WebComponentCves_j.Cve), Cwe = tostring(WebComponentCves_j.Cwe), CvssScore = tolong(WebComponentCves_j.CvssScore), Cvss3Score = toreal(WebComponentCves_j.Cvss3Score)\n|where (CvssScore >= cvssscore or Cvss3Score >= cvss3score)\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g,WebComponentName_s,WebComponentVersion_s,Cve\n|project-keep WebComponentCategory_s,WebComponentName_s,WebComponentVersion_s,Cve,Cwe,CvssScore,Cvss3Score,AssetName_s,WebComponentLastSeen_t\n//|project-reorder AssetName_s,WebComponentName_s,WebComponentVersion_s,Cve,CvssScore,Cvss3Score,Cwe\n//|sort by WebComponentLastSeen_t desc\n//|summarize Asset = make_list(pack_all()) by AssetName_s\n//|summarize CVE = make_list(pack_all()) by Cve\n|summarize WebComponent = make_list(pack_all()) by WebComponentName_s,WebComponentVersion_s",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nlet cvssscore = {_easm_cvssscore};\nlet cvss3score = {_easm_cvss3score};\nEasmAssetWebComponent_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|where isnotempty(WebComponentCves_s)\n|where WebComponentLastSeen_t > lastseen\n|extend WebComponentCves_j = parse_json(WebComponentCves_s)\n|mv-expand WebComponentCves_j\n|extend Cve = tostring(WebComponentCves_j.Cve), Cwe = tostring(WebComponentCves_j.Cwe), CvssScore = tolong(WebComponentCves_j.CvssScore), Cvss3Score = toreal(WebComponentCves_j.Cvss3Score)\n|where (CvssScore >= cvssscore or Cvss3Score >= cvss3score)\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g,WebComponentName_s,WebComponentVersion_s,Cve\n|project-keep WebComponentCategory_s,WebComponentName_s,WebComponentVersion_s,Cve,Cwe,CvssScore,Cvss3Score,AssetName_s,WebComponentLastSeen_t\n//|project-reorder AssetName_s,WebComponentName_s,WebComponentVersion_s,Cve,CvssScore,Cvss3Score,Cwe\n//|sort by WebComponentLastSeen_t desc\n//|summarize Asset = make_list(pack_all()) by AssetName_s\n//|summarize CVE = make_list(pack_all()) by Cve\n|summarize WebComponent = make_list(pack_all()) by WebComponentName_s,WebComponentVersion_s",
         "related": {
           "categories": [
             "security"
@@ -569,13 +569,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/054f06cc-635c-4bf9-977b-07395582c3af')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/80f888eb-7149-4dc0-a200-6e1c16802caf')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "CISA Known Exploited Vulnerabilities_no groupBy",
-        "body": "let workspace = '{_la_workspace_name}';\nlet cvssscore = {_la_cvssscore};\nlet cvss3score = {_la_cvss3score};\nlet Cves = externaldata (CveId: string )\n[\n    h@'https://www.cisa.gov/sites/default/files/csv/known_exploited_vulnerabilities.csv'\n]\nwith (format='csv', ingestionMapping='[{\"Column\":\"CveId\",\"Properties\":{\"Ordinal\":\"0\"}}]')\n|where CveId != 'cveID';\nCves\n| join kind=rightsemi (EasmAssetWebComponent_CL\n    |where WorkspaceName_s == workspace\n    |join kind=anti oldestsnapshot on SnapshotDateTime_t\n    |where isnotempty(WebComponentCves_s)\n    |where WebComponentLastSeen_t > lastseen\n    |extend WebComponentCves_j = parse_json(WebComponentCves_s)\n    |mv-expand WebComponentCves_j\n    |extend Cve = tostring(WebComponentCves_j.Cve), Cwe = tostring(WebComponentCves_j.Cwe), CvssScore = tolong(WebComponentCves_j.CvssScore), Cvss3Score = toreal(WebComponentCves_j.Cvss3Score)\n    |where (CvssScore >= cvssscore or Cvss3Score >= cvss3score)\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g,WebComponentName_s,WebComponentVersion_s,Cve\n    |project-keep WebComponentCategory_s,WebComponentName_s,WebComponentVersion_s,Cve,Cwe,CvssScore,Cvss3Score,AssetName_s,WebComponentLastSeen_t\n) on $left.CveId == $right.Cve\n|project-reorder AssetName_s,WebComponentName_s,WebComponentVersion_s,Cve,CvssScore,Cvss3Score,Cwe\n|sort by WebComponentLastSeen_t desc\n//|summarize Asset = make_list(pack_all()) by AssetName_s\n//|summarize CVE = make_list(pack_all()) by Cve\n//|summarize WebComponent = make_list(pack_all()) by WebComponentName_s,WebComponentVersion_s",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nlet cvssscore = {_easm_cvssscore};\nlet cvss3score = {_easm_cvss3score};\nlet Cves = externaldata (CveId: string )\n[\n    h@'https://www.cisa.gov/sites/default/files/csv/known_exploited_vulnerabilities.csv'\n]\nwith (format='csv', ingestionMapping='[{\"Column\":\"CveId\",\"Properties\":{\"Ordinal\":\"0\"}}]')\n|where CveId != 'cveID';\nCves\n| join kind=rightsemi (EasmAssetWebComponent_CL\n    |where WorkspaceName_s == workspace\n    |join kind=anti oldestsnapshot on SnapshotDateTime_t\n    |where isnotempty(WebComponentCves_s)\n    |where WebComponentLastSeen_t > lastseen\n    |extend WebComponentCves_j = parse_json(WebComponentCves_s)\n    |mv-expand WebComponentCves_j\n    |extend Cve = tostring(WebComponentCves_j.Cve), Cwe = tostring(WebComponentCves_j.Cwe), CvssScore = tolong(WebComponentCves_j.CvssScore), Cvss3Score = toreal(WebComponentCves_j.Cvss3Score)\n    |where (CvssScore >= cvssscore or Cvss3Score >= cvss3score)\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g,WebComponentName_s,WebComponentVersion_s,Cve\n    |project-keep WebComponentCategory_s,WebComponentName_s,WebComponentVersion_s,Cve,Cwe,CvssScore,Cvss3Score,AssetName_s,WebComponentLastSeen_t\n) on $left.CveId == $right.Cve\n|project-reorder AssetName_s,WebComponentName_s,WebComponentVersion_s,Cve,CvssScore,Cvss3Score,Cwe\n|sort by WebComponentLastSeen_t desc\n//|summarize Asset = make_list(pack_all()) by AssetName_s\n//|summarize CVE = make_list(pack_all()) by Cve\n//|summarize WebComponent = make_list(pack_all()) by WebComponentName_s,WebComponentVersion_s",
         "related": {
           "categories": [
             "security"
@@ -594,13 +594,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/a00b1319-74b1-48e5-aedb-f41e37f5d40b')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/df9ad1b7-f6fc-4235-bf05-486cdb6e62fb')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "CISA Known Exploited Vulnerabilities_groupBy AssetName",
-        "body": "let workspace = '{_la_workspace_name}';\nlet cvssscore = {_la_cvssscore};\nlet cvss3score = {_la_cvss3score};\nlet Cves = externaldata (CveId: string )\n[\n    h@'https://www.cisa.gov/sites/default/files/csv/known_exploited_vulnerabilities.csv'\n]\nwith (format='csv', ingestionMapping='[{\"Column\":\"CveId\",\"Properties\":{\"Ordinal\":\"0\"}}]')\n|where CveId != 'cveID';\nCves\n| join kind=rightsemi (EasmAssetWebComponent_CL\n    |where WorkspaceName_s == workspace\n    |join kind=anti oldestsnapshot on SnapshotDateTime_t\n    |where isnotempty(WebComponentCves_s)\n    |where WebComponentLastSeen_t > lastseen\n    |extend WebComponentCves_j = parse_json(WebComponentCves_s)\n    |mv-expand WebComponentCves_j\n    |extend Cve = tostring(WebComponentCves_j.Cve), Cwe = tostring(WebComponentCves_j.Cwe), CvssScore = tolong(WebComponentCves_j.CvssScore), Cvss3Score = toreal(WebComponentCves_j.Cvss3Score)\n    |where (CvssScore >= cvssscore or Cvss3Score >= cvss3score)\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g,WebComponentName_s,WebComponentVersion_s,Cve\n    |project-keep WebComponentCategory_s,WebComponentName_s,WebComponentVersion_s,Cve,Cwe,CvssScore,Cvss3Score,AssetName_s,WebComponentLastSeen_t\n) on $left.CveId == $right.Cve\n//|project-reorder AssetName_s,WebComponentName_s,WebComponentVersion_s,Cve,CvssScore,Cvss3Score,Cwe\n//|sort by WebComponentLastSeen_t desc\n|summarize Asset = make_list(pack_all()) by AssetName_s\n//|summarize CVE = make_list(pack_all()) by Cve\n//|summarize WebComponent = make_list(pack_all()) by WebComponentName_s,WebComponentVersion_s",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nlet cvssscore = {_easm_cvssscore};\nlet cvss3score = {_easm_cvss3score};\nlet Cves = externaldata (CveId: string )\n[\n    h@'https://www.cisa.gov/sites/default/files/csv/known_exploited_vulnerabilities.csv'\n]\nwith (format='csv', ingestionMapping='[{\"Column\":\"CveId\",\"Properties\":{\"Ordinal\":\"0\"}}]')\n|where CveId != 'cveID';\nCves\n| join kind=rightsemi (EasmAssetWebComponent_CL\n    |where WorkspaceName_s == workspace\n    |join kind=anti oldestsnapshot on SnapshotDateTime_t\n    |where isnotempty(WebComponentCves_s)\n    |where WebComponentLastSeen_t > lastseen\n    |extend WebComponentCves_j = parse_json(WebComponentCves_s)\n    |mv-expand WebComponentCves_j\n    |extend Cve = tostring(WebComponentCves_j.Cve), Cwe = tostring(WebComponentCves_j.Cwe), CvssScore = tolong(WebComponentCves_j.CvssScore), Cvss3Score = toreal(WebComponentCves_j.Cvss3Score)\n    |where (CvssScore >= cvssscore or Cvss3Score >= cvss3score)\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g,WebComponentName_s,WebComponentVersion_s,Cve\n    |project-keep WebComponentCategory_s,WebComponentName_s,WebComponentVersion_s,Cve,Cwe,CvssScore,Cvss3Score,AssetName_s,WebComponentLastSeen_t\n) on $left.CveId == $right.Cve\n//|project-reorder AssetName_s,WebComponentName_s,WebComponentVersion_s,Cve,CvssScore,Cvss3Score,Cwe\n//|sort by WebComponentLastSeen_t desc\n|summarize Asset = make_list(pack_all()) by AssetName_s\n//|summarize CVE = make_list(pack_all()) by Cve\n//|summarize WebComponent = make_list(pack_all()) by WebComponentName_s,WebComponentVersion_s",
         "related": {
           "categories": [
             "security"
@@ -619,13 +619,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/0ec6193f-b1a2-4249-8bf7-9cc3434d5cd0')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/6f2e1566-6ee2-47cc-b61e-2a95e1975094')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "CISA Known Exploited Vulnerabilities_groupBy Cve",
-        "body": "let workspace = '{_la_workspace_name}';\nlet cvssscore = {_la_cvssscore};\nlet cvss3score = {_la_cvss3score};\nlet Cves = externaldata (CveId: string )\n[\n    h@'https://www.cisa.gov/sites/default/files/csv/known_exploited_vulnerabilities.csv'\n]\nwith (format='csv', ingestionMapping='[{\"Column\":\"CveId\",\"Properties\":{\"Ordinal\":\"0\"}}]')\n|where CveId != 'cveID';\nCves\n| join kind=rightsemi (EasmAssetWebComponent_CL\n    |where WorkspaceName_s == workspace\n    |join kind=anti oldestsnapshot on SnapshotDateTime_t\n    |where isnotempty(WebComponentCves_s)\n    |where WebComponentLastSeen_t > lastseen\n    |extend WebComponentCves_j = parse_json(WebComponentCves_s)\n    |mv-expand WebComponentCves_j\n    |extend Cve = tostring(WebComponentCves_j.Cve), Cwe = tostring(WebComponentCves_j.Cwe), CvssScore = tolong(WebComponentCves_j.CvssScore), Cvss3Score = toreal(WebComponentCves_j.Cvss3Score)\n    |where (CvssScore >= cvssscore or Cvss3Score >= cvss3score)\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g,WebComponentName_s,WebComponentVersion_s,Cve\n    |project-keep WebComponentCategory_s,WebComponentName_s,WebComponentVersion_s,Cve,Cwe,CvssScore,Cvss3Score,AssetName_s,WebComponentLastSeen_t\n) on $left.CveId == $right.Cve\n//|project-reorder AssetName_s,WebComponentName_s,WebComponentVersion_s,Cve,CvssScore,Cvss3Score,Cwe\n//|sort by WebComponentLastSeen_t desc\n//|summarize Asset = make_list(pack_all()) by AssetName_s\n|summarize CVE = make_list(pack_all()) by Cve\n//|summarize WebComponent = make_list(pack_all()) by WebComponentName_s,WebComponentVersion_s",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nlet cvssscore = {_easm_cvssscore};\nlet cvss3score = {_easm_cvss3score};\nlet Cves = externaldata (CveId: string )\n[\n    h@'https://www.cisa.gov/sites/default/files/csv/known_exploited_vulnerabilities.csv'\n]\nwith (format='csv', ingestionMapping='[{\"Column\":\"CveId\",\"Properties\":{\"Ordinal\":\"0\"}}]')\n|where CveId != 'cveID';\nCves\n| join kind=rightsemi (EasmAssetWebComponent_CL\n    |where WorkspaceName_s == workspace\n    |join kind=anti oldestsnapshot on SnapshotDateTime_t\n    |where isnotempty(WebComponentCves_s)\n    |where WebComponentLastSeen_t > lastseen\n    |extend WebComponentCves_j = parse_json(WebComponentCves_s)\n    |mv-expand WebComponentCves_j\n    |extend Cve = tostring(WebComponentCves_j.Cve), Cwe = tostring(WebComponentCves_j.Cwe), CvssScore = tolong(WebComponentCves_j.CvssScore), Cvss3Score = toreal(WebComponentCves_j.Cvss3Score)\n    |where (CvssScore >= cvssscore or Cvss3Score >= cvss3score)\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g,WebComponentName_s,WebComponentVersion_s,Cve\n    |project-keep WebComponentCategory_s,WebComponentName_s,WebComponentVersion_s,Cve,Cwe,CvssScore,Cvss3Score,AssetName_s,WebComponentLastSeen_t\n) on $left.CveId == $right.Cve\n//|project-reorder AssetName_s,WebComponentName_s,WebComponentVersion_s,Cve,CvssScore,Cvss3Score,Cwe\n//|sort by WebComponentLastSeen_t desc\n//|summarize Asset = make_list(pack_all()) by AssetName_s\n|summarize CVE = make_list(pack_all()) by Cve\n//|summarize WebComponent = make_list(pack_all()) by WebComponentName_s,WebComponentVersion_s",
         "related": {
           "categories": [
             "security"
@@ -644,13 +644,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/34bc574b-00ec-4812-9aa6-557580d7d1b4')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/460ead9f-b054-4162-977a-494dd310e0b4')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "CISA Known Exploited Vulnerabilities_groupBy WebComponent",
-        "body": "let workspace = '{_la_workspace_name}';\nlet cvssscore = {_la_cvssscore};\nlet cvss3score = {_la_cvss3score};\nlet Cves = externaldata (CveId: string )\n[\n    h@'https://www.cisa.gov/sites/default/files/csv/known_exploited_vulnerabilities.csv'\n]\nwith (format='csv', ingestionMapping='[{\"Column\":\"CveId\",\"Properties\":{\"Ordinal\":\"0\"}}]')\n|where CveId != 'cveID';\nCves\n| join kind=rightsemi (EasmAssetWebComponent_CL\n    |where WorkspaceName_s == workspace\n    |join kind=anti oldestsnapshot on SnapshotDateTime_t\n    |where isnotempty(WebComponentCves_s)\n    |where WebComponentLastSeen_t > lastseen\n    |extend WebComponentCves_j = parse_json(WebComponentCves_s)\n    |mv-expand WebComponentCves_j\n    |extend Cve = tostring(WebComponentCves_j.Cve), Cwe = tostring(WebComponentCves_j.Cwe), CvssScore = tolong(WebComponentCves_j.CvssScore), Cvss3Score = toreal(WebComponentCves_j.Cvss3Score)\n    |where (CvssScore >= cvssscore or Cvss3Score >= cvss3score)\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g,WebComponentName_s,WebComponentVersion_s,Cve\n    |project-keep WebComponentCategory_s,WebComponentName_s,WebComponentVersion_s,Cve,Cwe,CvssScore,Cvss3Score,AssetName_s,WebComponentLastSeen_t\n) on $left.CveId == $right.Cve\n//|project-reorder AssetName_s,WebComponentName_s,WebComponentVersion_s,Cve,CvssScore,Cvss3Score,Cwe\n//|sort by WebComponentLastSeen_t desc\n//|summarize Asset = make_list(pack_all()) by AssetName_s\n//|summarize CVE = make_list(pack_all()) by Cve\n|summarize WebComponent = make_list(pack_all()) by WebComponentName_s,WebComponentVersion_s",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nlet cvssscore = {_easm_cvssscore};\nlet cvss3score = {_easm_cvss3score};\nlet Cves = externaldata (CveId: string )\n[\n    h@'https://www.cisa.gov/sites/default/files/csv/known_exploited_vulnerabilities.csv'\n]\nwith (format='csv', ingestionMapping='[{\"Column\":\"CveId\",\"Properties\":{\"Ordinal\":\"0\"}}]')\n|where CveId != 'cveID';\nCves\n| join kind=rightsemi (EasmAssetWebComponent_CL\n    |where WorkspaceName_s == workspace\n    |join kind=anti oldestsnapshot on SnapshotDateTime_t\n    |where isnotempty(WebComponentCves_s)\n    |where WebComponentLastSeen_t > lastseen\n    |extend WebComponentCves_j = parse_json(WebComponentCves_s)\n    |mv-expand WebComponentCves_j\n    |extend Cve = tostring(WebComponentCves_j.Cve), Cwe = tostring(WebComponentCves_j.Cwe), CvssScore = tolong(WebComponentCves_j.CvssScore), Cvss3Score = toreal(WebComponentCves_j.Cvss3Score)\n    |where (CvssScore >= cvssscore or Cvss3Score >= cvss3score)\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g,WebComponentName_s,WebComponentVersion_s,Cve\n    |project-keep WebComponentCategory_s,WebComponentName_s,WebComponentVersion_s,Cve,Cwe,CvssScore,Cvss3Score,AssetName_s,WebComponentLastSeen_t\n) on $left.CveId == $right.Cve\n//|project-reorder AssetName_s,WebComponentName_s,WebComponentVersion_s,Cve,CvssScore,Cvss3Score,Cwe\n//|sort by WebComponentLastSeen_t desc\n//|summarize Asset = make_list(pack_all()) by AssetName_s\n//|summarize CVE = make_list(pack_all()) by Cve\n|summarize WebComponent = make_list(pack_all()) by WebComponentName_s,WebComponentVersion_s",
         "related": {
           "categories": [
             "security"
@@ -669,13 +669,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/1cd7c660-f422-4099-ad86-8de4a2940b8d')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/a1d791d1-dd64-40b4-ad58-dd4dd4370956')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "WebComponents Search",
-        "body": "let workspace = '{_la_workspace_name}';\nEasmAssetWebComponent_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where WebComponentLastSeen_t > lastseen\n|project-keep AssetName_s,WebComponentName_s,WebComponentCategory_s,WebComponentVersion_s,WebComponentFirstSeen_t,WebComponentLastSeen_t\n|project-reorder AssetName_s,WebComponentName_s,WebComponentCategory_s,WebComponentVersion_s",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nEasmAssetWebComponent_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where WebComponentLastSeen_t > lastseen\n|project-keep AssetName_s,WebComponentName_s,WebComponentCategory_s,WebComponentVersion_s,WebComponentFirstSeen_t,WebComponentLastSeen_t\n|project-reorder AssetName_s,WebComponentName_s,WebComponentCategory_s,WebComponentVersion_s",
         "related": {
           "categories": [
             "security"
@@ -694,13 +694,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/30a3fbd6-2327-4fc3-b91b-6b0c13849928')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/9b6c6ef3-5cca-405b-bc33-3aa0a4995d68')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "WebComponents with ExpiredService",
-        "body": "let workspace = '{_la_workspace_name}';\nEasmAssetWebComponent_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where WebComponentCategory_s == 'Expired Service'\n//|where WebComponentLastSeen_t > lastseen\n|project-keep AssetName_s,WebComponentName_s,WebComponentFirstSeen_t,WebComponentLastSeen_t\n|project-reorder AssetName_s,WebComponentName_s",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nEasmAssetWebComponent_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where WebComponentCategory_s == 'Expired Service'\n//|where WebComponentLastSeen_t > lastseen\n|project-keep AssetName_s,WebComponentName_s,WebComponentFirstSeen_t,WebComponentLastSeen_t\n|project-reorder AssetName_s,WebComponentName_s",
         "related": {
           "categories": [
             "security"
@@ -719,13 +719,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/f2fc18e9-0c44-41f5-87d3-7128b67e927b')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/e7a5274b-1914-482b-a24e-76c3f536ac88')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "WebComponents with RemoteAccess",
-        "body": "let workspace = '{_la_workspace_name}';\nEasmAssetWebComponent_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where WebComponentCategory_s == 'Remote Access'\n|where WebComponentLastSeen_t > lastseen\n|project-keep AssetName_s,WebComponentName_s,WebComponentFirstSeen_t,WebComponentLastSeen_t\n|project-reorder AssetName_s,WebComponentName_s",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nEasmAssetWebComponent_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where WebComponentCategory_s == 'Remote Access'\n|where WebComponentLastSeen_t > lastseen\n|project-keep AssetName_s,WebComponentName_s,WebComponentFirstSeen_t,WebComponentLastSeen_t\n|project-reorder AssetName_s,WebComponentName_s",
         "related": {
           "categories": [
             "security"
@@ -744,13 +744,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/fb03c25f-ee6a-4bc3-8c5c-24a817d4479e')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/5251cff8-cf11-4626-a65e-28b9fd5d948d')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "WebComponents with CAPTCHAs",
-        "body": "let workspace = '{_la_workspace_name}';\nEasmAssetWebComponent_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where WebComponentCategory_s == 'CAPTCHA'\n|where WebComponentLastSeen_t > lastseen\n|project-keep AssetName_s,WebComponentName_s,WebComponentFirstSeen_t,WebComponentLastSeen_t\n|project-reorder AssetName_s,WebComponentName_s",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nEasmAssetWebComponent_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where WebComponentCategory_s == 'CAPTCHA'\n|where WebComponentLastSeen_t > lastseen\n|project-keep AssetName_s,WebComponentName_s,WebComponentFirstSeen_t,WebComponentLastSeen_t\n|project-reorder AssetName_s,WebComponentName_s",
         "related": {
           "categories": [
             "security"
@@ -769,13 +769,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/78812682-154d-405f-8af4-a972e954b29e')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/f72401d0-a678-421b-b715-f6de0cf37ecb')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "WebComponents with DDOS Protection",
-        "body": "let workspace = '{_la_workspace_name}';\nEasmAssetWebComponent_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where WebComponentCategory_s == 'DDOS Protection'\n|where WebComponentLastSeen_t > lastseen\n|project-keep AssetName_s,WebComponentName_s,WebComponentFirstSeen_t,WebComponentLastSeen_t\n|project-reorder AssetName_s,WebComponentName_s",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nEasmAssetWebComponent_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where WebComponentCategory_s == 'DDOS Protection'\n|where WebComponentLastSeen_t > lastseen\n|project-keep AssetName_s,WebComponentName_s,WebComponentFirstSeen_t,WebComponentLastSeen_t\n|project-reorder AssetName_s,WebComponentName_s",
         "related": {
           "categories": [
             "security"
@@ -794,13 +794,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/1c7b5918-8d46-45ae-9707-a3396e85d935')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/6f8e942e-7e88-4cfc-8df7-a6bec0d7f9b2')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "Hosts Over Time",
-        "body": "let workspace = '{_la_workspace_name}';\nEasmAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|where AssetType_s == 'HOST'\n|summarize Count=count() by AssetType_s,SnapshotDateTime_t",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nEasmAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|where AssetType_s == 'HOST'\n|summarize Count=count() by AssetType_s,SnapshotDateTime_t",
         "related": {
           "categories": [
             "security"
@@ -819,13 +819,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/e82a1e8b-3679-47c0-8c4a-16d5af14c6d4')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/7616f9bd-8d7c-42c1-8a4d-dd9267f5d715')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "Hosts by Domain",
-        "body": "let workspace = '{_la_workspace_name}';\nEasmHostAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|extend Domain = iff(isnotempty(Domain_s), Domain_s, Host_s)\n//|summarize hint.strategy=shuffle arg_max(SnapshotDateTime, *) by Domain,AssetName\n|summarize Count=count() by Domain\n|sort by Count {_la_host_sort_order}",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nEasmHostAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|extend Domain = iff(isnotempty(Domain_s), Domain_s, Host_s)\n//|summarize hint.strategy=shuffle arg_max(SnapshotDateTime, *) by Domain,AssetName\n|summarize Count=count() by Domain\n|sort by Count {_easm_host_sort_order}",
         "related": {
           "categories": [
             "security"
@@ -844,13 +844,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/c12808b5-f33f-4eeb-a614-5a14f3b1d45a')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/847b5a22-b88b-4644-932f-17d2a46cb8c1')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "Hosts Lookup by Domain",
-        "body": "let workspace = '{_la_workspace_name}';\nEasmHostAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where Domain_s == '{_la_domain_name}'\n|project-keep Host_s",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nEasmHostAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where Domain_s == '{_easm_domain_name}'\n|project-keep Host_s",
         "related": {
           "categories": [
             "security"
@@ -869,13 +869,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/0bce97f7-7a82-4cbc-a353-d5341c3e2bd2')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/8dc1a7ac-0080-4397-be85-34e83429f14d')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "IPs Over Time",
-        "body": "let workspace = '{_la_workspace_name}';\nEasmAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|where AssetType_s == 'IP_ADDRESS'\n|summarize Count=count() by AssetType_s,SnapshotDateTime_t",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nEasmAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|where AssetType_s == 'IP_ADDRESS'\n|summarize Count=count() by AssetType_s,SnapshotDateTime_t",
         "related": {
           "categories": [
             "security"
@@ -894,13 +894,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/8e7ec96d-d8f2-471f-a0f5-f5bc14b47df3')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/62e73652-6277-440e-a6c7-4f81cdab0c9b')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "IPs by Block",
-        "body": "let workspace = '{_la_workspace_name}';\nEasmIpAddressAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where isnotempty(IpBlocks_s)\n|extend IpBlocks_j = parse_json(IpBlocks_s)\n|extend ReversedBlock = array_reverse(IpBlocks_j)\n|extend IpBlock = array_slice(ReversedBlock,0,0)\n|extend IpBlock = tostring(strcat_array(IpBlock,''))\n|where isnotempty(IpBlock)\n|summarize Count=count() by IpBlock\n|sort by Count {_la_ip_sort_order}",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nEasmIpAddressAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where isnotempty(IpBlocks_s)\n|extend IpBlocks_j = parse_json(IpBlocks_s)\n|extend ReversedBlock = array_reverse(IpBlocks_j)\n|extend IpBlock = array_slice(ReversedBlock,0,0)\n|extend IpBlock = tostring(strcat_array(IpBlock,''))\n|where isnotempty(IpBlock)\n|summarize Count=count() by IpBlock\n|sort by Count {_easm_ip_sort_order}",
         "related": {
           "categories": [
             "security"
@@ -919,13 +919,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/86019c70-6b32-4d86-95d2-8e5872065add')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/d57b0bde-04b6-4a75-a6ed-c12fe5b9c755')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "IPs Lookup by IP Block",
-        "body": "let workspace = '{_la_workspace_name}';\nEasmIpAddressAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where IpBlocks_s has '{_la_ip_block}'\n|project-keep IPAddress",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nEasmIpAddressAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where IpBlocks_s has '{_easm_ip_block}'\n|project-keep IPAddress",
         "related": {
           "categories": [
             "security"
@@ -944,13 +944,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/f0f5baa8-86da-4986-b1ed-5538867e8601')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/cb60857f-dd48-43da-bb8b-7adc0ba0e639')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "Pages Over Time",
-        "body": "let workspace = '{_la_workspace_name}';\nEasmAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|where AssetType_s == 'PAGE'\n|summarize Count=count() by AssetType_s,SnapshotDateTime_t",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nEasmAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|where AssetType_s == 'PAGE'\n|summarize Count=count() by AssetType_s,SnapshotDateTime_t",
         "related": {
           "categories": [
             "security"
@@ -969,13 +969,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/af6ae0da-32ed-4f08-b43e-24d19afadf89')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/6fe65b66-b21a-43af-9f9d-93ad998e2385')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "Pages by Site Status",
-        "body": "let workspace = '{_la_workspace_name}';\nEasmPageAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where isnotempty(SiteStatus_s)\n|summarize Count=count() by SiteStatus_s\n|sort by Count {_la_page_sort_order}",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nEasmPageAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where isnotempty(SiteStatus_s)\n|summarize Count=count() by SiteStatus_s\n|sort by Count {_easm_page_sort_order}",
         "related": {
           "categories": [
             "security"
@@ -994,13 +994,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/854fdf5d-4a40-4871-b718-99270d33af49')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/b834529e-f39c-405e-8a27-3d3f144aaa44')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "Pages by Service",
-        "body": "let workspace = '{_la_workspace_name}';\nEasmPageAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|extend ServicePort = todynamic(array_reverse(split(Service_s,':')))\n|mv-expand ServicePort limit 1\n|extend ServicePort = tostring(ServicePort)\n|extend Service = case(ServicePort == '443','HTTPS',ServicePort == '80','HTTP','OTHER')\n|summarize Count=count() by ServicePort,Service\n|sort by Count {_la_page_sort_order}",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nEasmPageAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|extend ServicePort = todynamic(array_reverse(split(Service_s,':')))\n|mv-expand ServicePort limit 1\n|extend ServicePort = tostring(ServicePort)\n|extend Service = case(ServicePort == '443','HTTPS',ServicePort == '80','HTTP','OTHER')\n|summarize Count=count() by ServicePort,Service\n|sort by Count {_easm_page_sort_order}",
         "related": {
           "categories": [
             "security"
@@ -1019,13 +1019,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/611dc347-3761-4244-b44f-d722cfcb3802')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/ad15836f-6cfa-4e57-87c9-96baee0f7b69')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "SSL Certificates Over Time",
-        "body": "let workspace = '{_la_workspace_name}';\nEasmAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|where AssetType_s == 'SSL_CERT'\n|summarize Count=count() by AssetType_s,SnapshotDateTime_t",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nEasmAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|where AssetType_s == 'SSL_CERT'\n|summarize Count=count() by AssetType_s,SnapshotDateTime_t",
         "related": {
           "categories": [
             "security"
@@ -1044,13 +1044,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/4ce7bd8e-02b2-47a5-91a7-b8c279fb81c4')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/1c7be3e4-f6b0-4c5e-876a-0031953ae16f')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "SSL Certs Expired or Expiring Soon",
-        "body": "let workspace = '{_la_workspace_name}';\nEasmRisk_CL\n|where WorkspaceName_s == workspace\n|where MetricDisplayName_s contains \"certificates\"\n|extend ReversedAuditTrail = array_reverse(parse_json(AssetDiscoveryAuditTrail_s))\n|project-away AssetDiscoveryAuditTrail_s, AssetLastSeen_t\n|mv-expand ReversedAuditTrail limit 1\n|join kind=inner (EasmSslCertAsset_CL\n    | where WorkspaceName_s == workspace\n    | where AssetLastSeen_t > lastseen\n    | where (AssetLastSeen_t > InvalidAfter_t or (InvalidAfter_t > now() and InvalidAfter_t-30d < now()))\n    | extend Status = iff((AssetLastSeen_t > InvalidAfter_t),'Expired','Expiring in 30 days')\n    | extend CertCommonName = trim(@'[\\[\\]\\s\\\"]+',SubjectCommonNames_s)\n    //| extend CertCommonName = strcat_array(SubjectCommonNames,'')\n    | extend CertSha1 = AssetName_s\n    | project-keep AssetUuid_g, AssetLastSeen_t, CertCommonName, CertSha1, InvalidAfter_t, Status\n    ) on AssetUuid_g\n|project-keep ReversedAuditTrail,AssetLastSeen_t,CertCommonName,CertSha1,InvalidAfter_t,Status\n|extend AssetName = tostring(ReversedAuditTrail.AssetType)\n|project-away ReversedAuditTrail\n|summarize hint.strategy=shuffle arg_max(AssetLastSeen_t, *) by tostring(AssetName),CertCommonName,CertSha1,InvalidAfter_t,Status\n|order by InvalidAfter_t asc\n|project-reorder AssetName,Status,InvalidAfter_t,AssetLastSeen_t",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nEasmRisk_CL\n|where WorkspaceName_s == workspace\n|where MetricDisplayName_s contains \"certificates\"\n|extend ReversedAuditTrail = array_reverse(parse_json(AssetDiscoveryAuditTrail_s))\n|project-away AssetDiscoveryAuditTrail_s, AssetLastSeen_t\n|mv-expand ReversedAuditTrail limit 1\n|join kind=inner (EasmSslCertAsset_CL\n    | where WorkspaceName_s == workspace\n    | where AssetLastSeen_t > lastseen\n    | where (AssetLastSeen_t > InvalidAfter_t or (InvalidAfter_t > now() and InvalidAfter_t-30d < now()))\n    | extend Status = iff((AssetLastSeen_t > InvalidAfter_t),'Expired','Expiring in 30 days')\n    | extend CertCommonName = trim(@'[\\[\\]\\s\\\"]+',SubjectCommonNames_s)\n    //| extend CertCommonName = strcat_array(SubjectCommonNames,'')\n    | extend CertSha1 = AssetName_s\n    | project-keep AssetUuid_g, AssetLastSeen_t, CertCommonName, CertSha1, InvalidAfter_t, Status\n    ) on AssetUuid_g\n|project-keep ReversedAuditTrail,AssetLastSeen_t,CertCommonName,CertSha1,InvalidAfter_t,Status\n|extend AssetName = tostring(ReversedAuditTrail.AssetType)\n|project-away ReversedAuditTrail\n|summarize hint.strategy=shuffle arg_max(AssetLastSeen_t, *) by tostring(AssetName),CertCommonName,CertSha1,InvalidAfter_t,Status\n|order by InvalidAfter_t asc\n|project-reorder AssetName,Status,InvalidAfter_t,AssetLastSeen_t",
         "related": {
           "categories": [
             "security"
@@ -1069,13 +1069,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/d4bde9f7-ebb0-4c00-a195-e9bd0921a580')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/fd273fbe-ee78-4de5-b817-4914d705df0a')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "Self-Signed Certificates",
-        "body": "let workspace = '{_la_workspace_name}';\nEasmSslCertAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where AssetLastSeen_t > lastseen\n|where IsSelfSigned_b == true\n|extend CommonName = trim(@'[\\[\\]\\s\\\"]+',SubjectCommonNames_s)\n|join (EasmHostAsset_CL\n    |where WorkspaceName_s == workspace\n    |join kind=anti oldestsnapshot on SnapshotDateTime_t\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n    |where AssetLastSeen_t > lastseen\n    |where isnotempty(SslCerts_s)\n    |extend SslCerts_j = parse_json(SslCerts_s)\n    |mv-expand SslCerts_j\n    |extend HostThumb = tostring(SslCerts_j)\n    |extend SeenOnHost = AssetName_s\n    |project-keep SeenOnHost,HostThumb\n) on $left.Thumbprint_s == $right.HostThumb\n|join (EasmIpAddressAsset_CL\n    |where WorkspaceName_s == workspace\n    |join kind=anti oldestsnapshot on SnapshotDateTime_t\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n    |where AssetLastSeen_t > lastseen\n    |where isnotempty(SslCerts_s)\n    |extend SslCerts_j = parse_json(SslCerts_s)\n    |mv-expand SslCerts_j\n    |extend IpThumb = tostring(SslCerts_j)\n    |extend SeenOnIp = AssetName_s\n    |project-keep SeenOnIp,IpThumb\n) on $left.Thumbprint_s == $right.IpThumb\n|extend Sha1 = Thumbprint_s\n|project-keep CommonName,SeenOnHost,SeenOnIp,Sha1",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nEasmSslCertAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where AssetLastSeen_t > lastseen\n|where IsSelfSigned_b == true\n|extend CommonName = trim(@'[\\[\\]\\s\\\"]+',SubjectCommonNames_s)\n|join (EasmHostAsset_CL\n    |where WorkspaceName_s == workspace\n    |join kind=anti oldestsnapshot on SnapshotDateTime_t\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n    |where AssetLastSeen_t > lastseen\n    |where isnotempty(SslCerts_s)\n    |extend SslCerts_j = parse_json(SslCerts_s)\n    |mv-expand SslCerts_j\n    |extend HostThumb = tostring(SslCerts_j)\n    |extend SeenOnHost = AssetName_s\n    |project-keep SeenOnHost,HostThumb\n) on $left.Thumbprint_s == $right.HostThumb\n|join (EasmIpAddressAsset_CL\n    |where WorkspaceName_s == workspace\n    |join kind=anti oldestsnapshot on SnapshotDateTime_t\n    |summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n    |where AssetLastSeen_t > lastseen\n    |where isnotempty(SslCerts_s)\n    |extend SslCerts_j = parse_json(SslCerts_s)\n    |mv-expand SslCerts_j\n    |extend IpThumb = tostring(SslCerts_j)\n    |extend SeenOnIp = AssetName_s\n    |project-keep SeenOnIp,IpThumb\n) on $left.Thumbprint_s == $right.IpThumb\n|extend Sha1 = Thumbprint_s\n|project-keep CommonName,SeenOnHost,SeenOnIp,Sha1",
         "related": {
           "categories": [
             "security"
@@ -1094,13 +1094,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/605f4a83-a8ce-4b55-8584-5556644d6d0d')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/c40f7593-0e07-448b-9646-3e53dc86fb9c')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "Certificate Issuer Orgs",
-        "body": "let workspace = '{_la_workspace_name}';\nEasmSslCertAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where isnotempty(IssuerOrganizations_s)\n|extend IssuerOrganizations_j = parse_json(IssuerOrganizations_s)\n|mv-expand IssuerOrganizations_j\n|where isnotempty(IssuerOrganizations_j)\n|extend Org = tostring(IssuerOrganizations_j)\n|summarize Count=count() by Org\n|sort by Count asc",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nEasmSslCertAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where isnotempty(IssuerOrganizations_s)\n|extend IssuerOrganizations_j = parse_json(IssuerOrganizations_s)\n|mv-expand IssuerOrganizations_j\n|where isnotempty(IssuerOrganizations_j)\n|extend Org = tostring(IssuerOrganizations_j)\n|summarize Count=count() by Org\n|sort by Count asc",
         "related": {
           "categories": [
             "security"
@@ -1119,13 +1119,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/cee7e74f-7a19-495a-ae0e-ecae9a53ca81')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/c6c648bc-770d-480a-9b63-51f5bd870fb9')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "Certificate Subject Orgs",
-        "body": "let workspace = '{_la_workspace_name}';\nEasmSslCertAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where isnotempty(SubjectOrganizations_s)\n|extend SubjectOrganizations_j = parse_json(SubjectOrganizations_s)\n|mv-expand SubjectOrganizations_j\n|where isnotempty(SubjectOrganizations_j)\n|extend Org = tostring(SubjectOrganizations_j)\n|summarize Count=count() by Org\n|sort by Count asc",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nEasmSslCertAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where isnotempty(SubjectOrganizations_s)\n|extend SubjectOrganizations_j = parse_json(SubjectOrganizations_s)\n|mv-expand SubjectOrganizations_j\n|where isnotempty(SubjectOrganizations_j)\n|extend Org = tostring(SubjectOrganizations_j)\n|summarize Count=count() by Org\n|sort by Count asc",
         "related": {
           "categories": [
             "security"
@@ -1144,13 +1144,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/df525892-158c-466b-889d-3debb2cf6c32')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/61d8226b-e094-4993-a900-6cbbdb3c146e')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "Domains Over Time",
-        "body": "let workspace = '{_la_workspace_name}';\nEasmAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|where AssetType_s == 'DOMAIN'\n|summarize Count=count() by AssetType_s,SnapshotDateTime_t",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nEasmAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|where AssetType_s == 'DOMAIN'\n|summarize Count=count() by AssetType_s,SnapshotDateTime_t",
         "related": {
           "categories": [
             "security"
@@ -1169,13 +1169,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/e35f8803-5379-42b9-b669-600bc5e2b61b')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/3cbc75d3-529f-4c38-b405-2f2d425cecf4')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "Admin Orgs",
-        "body": "let workspace = '{_la_workspace_name}';\nEasmDomainAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where isnotempty(AdminOrgs_s)\n|extend AdminOrgs_j = parse_json(AdminOrgs_s)\n|mv-expand AdminOrgs_j \n|where isnotempty(AdminOrgs_j)\n|extend Org = tostring(AdminOrgs_j)\n|summarize Count=count() by Org",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nEasmDomainAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where isnotempty(AdminOrgs_s)\n|extend AdminOrgs_j = parse_json(AdminOrgs_s)\n|mv-expand AdminOrgs_j \n|where isnotempty(AdminOrgs_j)\n|extend Org = tostring(AdminOrgs_j)\n|summarize Count=count() by Org",
         "related": {
           "categories": [
             "security"
@@ -1194,13 +1194,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/6125aa2f-dac2-456e-9b6a-a4ec0e34375a')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/2e55b09e-a2d3-47c3-9cb3-12caf0e10495')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "Registrant Orgs",
-        "body": "let workspace = '{_la_workspace_name}';\nEasmDomainAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where isnotempty(RegistrantOrgs_s)\n|extend RegistrantOrgs_j = parse_json(RegistrantOrgs_s)\n|mv-expand RegistrantOrgs_j \n|where isnotempty(RegistrantOrgs_j)\n|extend Org = tostring(RegistrantOrgs_j)\n|summarize Count=count() by Org",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nEasmDomainAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where isnotempty(RegistrantOrgs_s)\n|extend RegistrantOrgs_j = parse_json(RegistrantOrgs_s)\n|mv-expand RegistrantOrgs_j \n|where isnotempty(RegistrantOrgs_j)\n|extend Org = tostring(RegistrantOrgs_j)\n|summarize Count=count() by Org",
         "related": {
           "categories": [
             "security"
@@ -1219,13 +1219,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/7beb87db-5e9e-41c7-b6e6-208702f73ed5')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/c7844b45-c23d-4e90-90a3-788586486dc1')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "Technical Orgs",
-        "body": "let workspace = '{_la_workspace_name}';\nEasmDomainAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where isnotempty(TechnicalOrgs_s)\n|extend TechnicalOrgs_j = parse_json(TechnicalOrgs_s)\n|mv-expand TechnicalOrgs_j \n|where isnotempty(TechnicalOrgs_j)\n|extend Org = tostring(TechnicalOrgs_j)\n|summarize Count=count() by Org",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nEasmDomainAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where isnotempty(TechnicalOrgs_s)\n|extend TechnicalOrgs_j = parse_json(TechnicalOrgs_s)\n|mv-expand TechnicalOrgs_j \n|where isnotempty(TechnicalOrgs_j)\n|extend Org = tostring(TechnicalOrgs_j)\n|summarize Count=count() by Org",
         "related": {
           "categories": [
             "security"
@@ -1244,13 +1244,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/674400e5-b0c4-439f-88d6-700cef78106c')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/bdf388c6-784b-43ce-b64d-640e3dc1c438')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "Admin Contacts",
-        "body": "let workspace = '{_la_workspace_name}';\nEasmDomainAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where isnotempty(AdminContacts_s)\n|extend AdminContacts_j = parse_json(AdminContacts_s)\n|mv-expand AdminContacts_j \n|where isnotempty(AdminContacts_j)\n|extend Contact = tostring(AdminContacts_j)\n|summarize Count=count() by Contact",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nEasmDomainAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where isnotempty(AdminContacts_s)\n|extend AdminContacts_j = parse_json(AdminContacts_s)\n|mv-expand AdminContacts_j \n|where isnotempty(AdminContacts_j)\n|extend Contact = tostring(AdminContacts_j)\n|summarize Count=count() by Contact",
         "related": {
           "categories": [
             "security"
@@ -1269,13 +1269,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/9e148bba-900c-4ebc-bdbf-dd74e46f640a')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/09a20220-248e-4eee-be15-a4a8d9d4ea50')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "Registrant Contacts",
-        "body": "let workspace = '{_la_workspace_name}';\nEasmDomainAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where isnotempty(RegistrantContacts_s)\n|extend RegistrantContacts_j = parse_json(RegistrantContacts_s)\n|mv-expand RegistrantContacts_j \n|where isnotempty(RegistrantContacts_j)\n|extend Contact = tostring(RegistrantContacts_j)\n|summarize Count=count() by Contact",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nEasmDomainAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where isnotempty(RegistrantContacts_s)\n|extend RegistrantContacts_j = parse_json(RegistrantContacts_s)\n|mv-expand RegistrantContacts_j \n|where isnotempty(RegistrantContacts_j)\n|extend Contact = tostring(RegistrantContacts_j)\n|summarize Count=count() by Contact",
         "related": {
           "categories": [
             "security"
@@ -1294,13 +1294,13 @@
     {
       "type": "Microsoft.OperationalInsights/querypacks/queries",
       "apiVersion": "2019-09-01",
-      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/4509410e-82ec-4468-a7f2-f2bfc919a8d6')]",
+      "name": "[concat(parameters('querypacks_MDEASM_Query_Pack_name'), '/a9f66cd3-980d-4852-a6d3-a18fbef1f08c')]",
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/querypacks', parameters('querypacks_MDEASM_Query_Pack_name'))]"
       ],
       "properties": {
         "displayName": "Technical Contacts",
-        "body": "let workspace = '{_la_workspace_name}';\nEasmDomainAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where isnotempty(TechnicalContacts_s)\n|extend TechnicalContacts_j = parse_json(TechnicalContacts_s)\n|mv-expand TechnicalContacts_j \n|where isnotempty(TechnicalContacts_j)\n|extend Contact = tostring(TechnicalContacts_j)\n|summarize Count=count() by Contact",
+        "body": "let workspace = '{_easm_workspace_name}';\nlet lastseen = ago(30d);\nlet oldestsnapshot = EasmAsset_CL|where WorkspaceName_s == workspace|summarize by SnapshotDateTime_t|sort by SnapshotDateTime_t asc|take 1;\nEasmDomainAsset_CL\n|where WorkspaceName_s == workspace\n|join kind=anti oldestsnapshot on SnapshotDateTime_t\n|summarize hint.strategy=shuffle arg_max(SnapshotDateTime_t, *) by AssetUuid_g\n|where isnotempty(TechnicalContacts_s)\n|extend TechnicalContacts_j = parse_json(TechnicalContacts_s)\n|mv-expand TechnicalContacts_j \n|where isnotempty(TechnicalContacts_j)\n|extend Contact = tostring(TechnicalContacts_j)\n|summarize Count=count() by Contact",
         "related": {
           "categories": [
             "security"

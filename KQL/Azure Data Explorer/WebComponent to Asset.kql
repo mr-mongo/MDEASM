@@ -1,6 +1,8 @@
-let workspace = '{_adx_workspace_name}';
-let Name = tostring(parse_json('{_adx_wc_detail}').Name);
-let Version = tostring(parse_json('{_adx_wc_detail}').Version);
+let workspace = '{_easm_workspace_name}';
+let lastseen = ago(30d);
+let oldestsnapshot = EasmAsset|where WorkspaceName == workspace|summarize by SnapshotDateTime|sort by SnapshotDateTime asc|take 1;
+let Name = tostring(parse_json('{_easm_wc_detail}').Name);
+let Version = tostring(parse_json('{_easm_wc_detail}').Version);
 EasmAssetWebComponent
 |where WorkspaceName == workspace
 |join kind=anti oldestsnapshot on SnapshotDateTime

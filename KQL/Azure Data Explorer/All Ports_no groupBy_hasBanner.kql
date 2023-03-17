@@ -1,4 +1,6 @@
-let workspace = '{_adx_workspace_name}';
+let workspace = '{_easm_workspace_name}';
+let lastseen = ago(30d);
+let oldestsnapshot = EasmAsset|where WorkspaceName == workspace|summarize by SnapshotDateTime|sort by SnapshotDateTime asc|take 1;
 union isfuzzy=true (
     EasmHostAsset
 	|where WorkspaceName == workspace
@@ -31,7 +33,7 @@ union isfuzzy=true (
     |where PortLastSeen > lastseen
     |project System, Port, LastPortState, Source,PortLastSeen
     )
-|extend Keep = case('{_adx_system_type}' == 'IPs Only', 'EasmIpAddressAsset', '{_adx_system_type}' == 'Hosts Only', 'EasmHostAsset', 'EasmHostAsset,EasmIpAddressAsset')
+|extend Keep = case('{_easm_system_type}' == 'IPs Only', 'EasmIpAddressAsset', '{_easm_system_type}' == 'Hosts Only', 'EasmHostAsset', 'EasmHostAsset,EasmIpAddressAsset')
 |where Keep has Source
 |join (EasmAssetBanner
     |where WorkspaceName == workspace
@@ -39,7 +41,7 @@ union isfuzzy=true (
     |summarize hint.strategy=shuffle arg_max(SnapshotDateTime, *) by AssetName,Port
     |project-keep AssetName,Port
 ) on $left.System == $right.AssetName, $left.Port == $right.Port
-|sort by System {_adx_port_sort}, Port {_adx_port_sort}
+|sort by System {_easm_port_sort}, Port {_easm_port_sort}
 |project-away Source,Keep,Port1,AssetName
 //|summarize AllPorts = make_set(Port) by System
 //|summarize AllSystems = make_set(System) by Port

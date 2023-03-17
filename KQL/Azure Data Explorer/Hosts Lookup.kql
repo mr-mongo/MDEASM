@@ -1,7 +1,9 @@
-let workspace = '{_adx_workspace_name}';
+let workspace = '{_easm_workspace_name}';
+let lastseen = ago(30d);
+let oldestsnapshot = EasmAsset|where WorkspaceName == workspace|summarize by SnapshotDateTime|sort by SnapshotDateTime asc|take 1;
 EasmHostAsset
 |where WorkspaceName == workspace
 |join kind=anti oldestsnapshot on SnapshotDateTime
 |summarize hint.strategy=shuffle arg_max(SnapshotDateTime, *) by AssetUuid
-|where Domain == '{_adx_domain_name}'
+|where Domain == '{_easm_domain_name}'
 |project-keep Host

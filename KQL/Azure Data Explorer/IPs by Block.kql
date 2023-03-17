@@ -1,4 +1,6 @@
-let workspace = '{_adx_workspace_name}';
+let workspace = '{_easm_workspace_name}';
+let lastseen = ago(30d);
+let oldestsnapshot = EasmAsset|where WorkspaceName == workspace|summarize by SnapshotDateTime|sort by SnapshotDateTime asc|take 1;
 EasmIpAddressAsset
 |where WorkspaceName == workspace
 |join kind=anti oldestsnapshot on SnapshotDateTime
@@ -9,4 +11,4 @@ EasmIpAddressAsset
 |extend IpBlock = tostring(strcat_array(IpBlock,''))
 |where isnotempty(IpBlock)
 |summarize Count=count() by IpBlock
-|sort by Count {_adx_ip_sort_order}
+|sort by Count {_easm_ip_sort_order}

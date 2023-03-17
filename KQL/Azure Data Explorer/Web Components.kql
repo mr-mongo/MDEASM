@@ -1,4 +1,6 @@
-let workspace = '{_adx_workspace_name}';
+let workspace = '{_easm_workspace_name}';
+let lastseen = ago(30d);
+let oldestsnapshot = EasmAsset|where WorkspaceName == workspace|summarize by SnapshotDateTime|sort by SnapshotDateTime asc|take 1;
 EasmAssetWebComponent
 |where WorkspaceName == workspace
 |join kind=anti oldestsnapshot on SnapshotDateTime
@@ -7,4 +9,4 @@ EasmAssetWebComponent
 |extend Name = WebComponentName, Version = WebComponentVersion
 |project-keep Name,Version,SnapshotDateTime,AssetName
 |summarize Count=count() by Name,Version
-|sort by Count {_adx_wc_sort}
+|sort by Count {_easm_wc_sort}

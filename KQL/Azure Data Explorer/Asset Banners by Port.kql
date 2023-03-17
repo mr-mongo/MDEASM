@@ -1,5 +1,7 @@
-let workspace = '{_adx_workspace_name}';
-let port_num = replace_regex('{_adx_port_to_portlookup}', @'.+Port":(\d+).+', @'\1');
+let workspace = '{_easm_workspace_name}';
+let lastseen = ago(30d);
+let oldestsnapshot = EasmAsset|where WorkspaceName == workspace|summarize by SnapshotDateTime|sort by SnapshotDateTime asc|take 1;
+let port_num = replace_regex('{_easm_port_to_portlookup}', @'.+Port":(\d+).+', @'\1');
 EasmAssetBanner
 |where WorkspaceName == workspace
 |join kind=anti oldestsnapshot on SnapshotDateTime
@@ -8,4 +10,4 @@ EasmAssetBanner
 |summarize hint.strategy=shuffle arg_max(SnapshotDateTime, *) by AssetName,ScanType,Port
 |project-keep AssetName, Port, ScanType, Banner*
 |project-reorder AssetName,Port,ScanType,Banner
-|sort by AssetName {_adx_port_sort}
+|sort by AssetName {_easm_port_sort}

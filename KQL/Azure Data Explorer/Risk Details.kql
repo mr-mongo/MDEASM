@@ -1,7 +1,9 @@
-let workspace = '{_adx_workspace_name}';
-let metric_name_high = '{_adx_risk_finding_high}';
-let metric_name_med = '{_adx_risk_finding_med}';
-let metric_name_low = '{_adx_risk_finding_low}';
+let workspace = '{_easm_workspace_name}';
+let lastseen = ago(30d);
+let oldestsnapshot = EasmAsset|where WorkspaceName == workspace|summarize by SnapshotDateTime|sort by SnapshotDateTime asc|take 1;
+let metric_name_high = '{_easm_risk_finding_high}';
+let metric_name_med = '{_easm_risk_finding_med}';
+let metric_name_low = '{_easm_risk_finding_low}';
 EasmRisk
 |where WorkspaceName == workspace
 |where AssetLastSeen > lastseen

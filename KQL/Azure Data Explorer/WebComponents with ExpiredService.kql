@@ -1,11 +1,11 @@
 let workspace = '{_easm_workspace_name}';
-let lastseen = ago(30d);
+let lastseen = 30d;
 let oldestsnapshot = EasmAsset|where WorkspaceName == workspace|summarize by SnapshotDateTime|sort by SnapshotDateTime asc|take 1;
 EasmAssetWebComponent
 |where WorkspaceName == workspace
 |join kind=anti oldestsnapshot on SnapshotDateTime
 |summarize hint.strategy=shuffle arg_max(SnapshotDateTime, *) by AssetUuid
 |where WebComponentCategory == 'Expired Service'
-|where WebComponentLastSeen > lastseen
+|where WebComponentLastSeen > ago(lastseen)
 |project-keep AssetName,WebComponentName,WebComponentFirstSeen,WebComponentLastSeen
 |project-reorder AssetName,WebComponentName

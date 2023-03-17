@@ -1,5 +1,5 @@
 let workspace = '{_easm_workspace_name}';
-let lastseen = ago(30d);
+let lastseen = 30d;
 let oldestsnapshot = EasmAsset|where WorkspaceName == workspace|summarize by SnapshotDateTime|sort by SnapshotDateTime asc|take 1;
 EasmIpAddressAsset
 |where WorkspaceName == workspace

@@ -1,9 +1,9 @@
 let workspace = '{_easm_workspace_name}';
-let lastseen = ago(30d);
+let lastseen = 30d;
 let oldestsnapshot = EasmAsset|where WorkspaceName == workspace|summarize by SnapshotDateTime|sort by SnapshotDateTime asc|take 1;
 EasmRisk
 |where WorkspaceName == workspace
-|where AssetLastSeen > lastseen
+|where AssetLastSeen > ago(lastseen)
 |where CategoryName startswith_cs 'Medium'
 |extend Priority = 'Medium'
 |project-keep Priority,MetricDisplayName,SnapshotDateTime,AssetName

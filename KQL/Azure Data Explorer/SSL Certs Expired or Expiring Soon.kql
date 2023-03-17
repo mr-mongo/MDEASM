@@ -1,5 +1,5 @@
 let workspace = '{_easm_workspace_name}';
-let lastseen = ago(30d);
+let lastseen = 30d;
 let oldestsnapshot = EasmAsset|where WorkspaceName == workspace|summarize by SnapshotDateTime|sort by SnapshotDateTime asc|take 1;
 EasmRisk
 |where WorkspaceName == workspace
@@ -9,7 +9,7 @@ EasmRisk
 |mv-expand ReversedAuditTrail limit 1
 |join kind=inner (EasmSslCertAsset
     | where WorkspaceName == workspace
-    | where AssetLastSeen > lastseen
+    | where AssetLastSeen > ago(lastseen)
     | where (AssetLastSeen > InvalidAfter or (InvalidAfter > now() and InvalidAfter-30d < now()))
     | extend Status = iff((AssetLastSeen > InvalidAfter),'Expired','Expiring in 30 days')
     | extend CertCommonName = strcat_array(SubjectCommonNames,'')

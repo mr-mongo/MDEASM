@@ -6,7 +6,7 @@
 ![workbook_condolidated](https://raw.githubusercontent.com/fer39e4f/MDEASM/main/Workbook/.images/image_workbook_consolidated.png "workbook_condolidated")
 
 If your `EASM Workspace Name` dropdown fails to populate, then you have one (or more) of the following problems:
-1. your Azure Data Explorer Cluster and/or Database name are wrong
+1. your Azure Data Explorer Cluster URI and/or Database name are wrong
 2. your Log Analytics workspace name and/or Resource Group name were entered incorrectly during import
 3. your ADX or LA databases do not have data (empty tables; best to confirm this directly within ADX or LA)
 

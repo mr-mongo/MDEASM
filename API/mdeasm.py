@@ -156,10 +156,9 @@ class Workspaces:
             logging.error(f"{workspace_name} not found")
             raise Exception(workspace_name)
 
-    def __asset_content_helper__(self, response_object, content_list=[], asset_list_name='', asset_id='', get_recent=True, last_seen_days_back=30, date_range_start='', date_range_end=''):
+    def __asset_content_helper__(self, response_object, asset_list_name='', asset_id='', get_recent=True, last_seen_days_back=30, date_range_start='', date_range_end=''):
         if asset_list_name:
-            content_list.extend(response_object.json()['content'])
-            for asset in content_list:
+            for asset in response_object.json()['content']:
                 getattr(self, asset_list_name).__add_asset__(Asset().__parse_workspace_assets__(asset, get_recent=get_recent, last_seen_days_back=last_seen_days_back, date_range_start=date_range_start, date_range_end=date_range_end))
         elif asset_id:
             getattr(self, asset_id).__parse_workspace_assets__(response_object.json(), get_recent=get_recent, last_seen_days_back=last_seen_days_back, date_range_start=date_range_start, date_range_end=date_range_end)
@@ -742,8 +741,7 @@ class Workspaces:
                 if page_counter == 0:
                     print(f"{time_counter_start.strftime('%d-%b-%y %H:%M:%S')} -- {total_assets} assets identified by query")
 
-                content = []
-                self.__asset_content_helper__(r, content_list=content, asset_list_name=asset_list_name, get_recent=get_recent, last_seen_days_back=last_seen_days_back, date_range_start=date_range_start, date_range_end=date_range_end)
+                self.__asset_content_helper__(r, asset_list_name=asset_list_name, get_recent=get_recent, last_seen_days_back=last_seen_days_back, date_range_start=date_range_start, date_range_end=date_range_end)
                 
                 page_counter+=1
                 

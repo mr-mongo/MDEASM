@@ -716,17 +716,21 @@ class Workspaces:
         if not workspace_name:
             workspace_name = self._default_workspace_name
         if self.__verify_workspace__(workspace_name):
-            if asset_list_name:
+            if asset_list_name and not hasattr(self, asset_list_name):
                 setattr(self, asset_list_name, AssetList())
-            else:
+            elif not asset_list_name:
                 asset_list_name = 'assetList'
                 setattr(self, asset_list_name, AssetList())
+            elif asset_list_name and hasattr(self, asset_list_name) and isinstance(getattr(self, asset_list_name), AssetList):
+                pass
+            
             if max_page_size > 100:
                 logging.warning('max_page_size cannot be greater than 100, setting max_page_size=100')
                 max_page_size = 100
             elif max_page_size < 1:
                 logging.warning('max_page_size cannot be less than 1, setting max_page_size=1')
                 max_page_size = 1
+            
             if max_page_count:
                 get_all=True
             
@@ -737,7 +741,7 @@ class Workspaces:
             while run_query:
                 r = self.__workspace_query_helper__('get_workspace_assets', method='get', endpoint='assets', params=params, workspace_name=workspace_name)
                 
-                total_assets = (r.json()['totalPages'] * max_page_size)
+                total_assets = r.json()['totalElements']
                 if page_counter == 0:
                     print(f"{time_counter_start.strftime('%d-%b-%y %H:%M:%S')} -- {total_assets} assets identified by query")
 

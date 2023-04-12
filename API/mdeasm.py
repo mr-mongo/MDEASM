@@ -5,7 +5,7 @@ _VERSION = 1.4
 # jorandall@microsoft.com
 # 
 # CHANGELOG
-# https://github.com/fer39e4f/MDEASM/blob/main/API/changelog.md
+# https://github.com/mr-mongo/MDEASM/blob/main/API/changelog.md
 #
 # TODO 
 #   create/update azure resource tags

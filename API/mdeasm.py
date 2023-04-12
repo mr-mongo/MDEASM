@@ -5,7 +5,7 @@ _VERSION = 1.4
 # jorandall@microsoft.com
 # 
 # CHANGELOG
-# https://github.com/fer39e4f/MDEASM/blob/main/API/changelog.md
+# https://github.com/mr-mongo/MDEASM/blob/main/API/changelog.md
 #
 # TODO 
 #   create/update azure resource tags
@@ -31,13 +31,14 @@ logging.basicConfig(format='%(asctime)s - %(levelname)s - %(funcName)s - %(messa
 class Workspaces:
     _state_map = requests.structures.CaseInsensitiveDict({
         'Approved':'confirmed', 'Candidate':'candidate', 'Dependency':'associatedThirdparty', 'MonitorOnly':'associatedPartner', 'RequiresInvestigation':'candidateInvestigate', 'Dismissed':'dismissed'})
-    _locations = [
+    _easm_regions = [
         'southcentralus','westus3','eastus','eastasia','swedencentral','australiaeast','japaneast']
     _metric_categories = [
         'priority_high_severity','priority_medium_severity','priority_low_severity']
     _metrics = [
         'cvss_score_critical','cvss_score_high','cvss_score_medium','cvss_score_low','unique_registrars','websites','unique_registrants','client_update_prohibited','client_transfer_prohibited','client_delete_prohibited','epp_none','owned_asns','third_party_asns','ssl_sha256','ssl_cert_sha1','ssl_cert_md5','ssl_cert_expired','ssl_cert_org_units','ssl_cert_orgs','site_status_active','site_status_inactive','site_status_requires_authorization','site_status_broken','site_status_browser_error','site_status_broken_cert_issue','site_status_active_cert_issue','site_status_requires_authorization_cert_issue','site_status_browser_error_cert_issue','pii_https','pii_http','pii_ssl_posture_md5','pii_ssl_posture_sha1','pii_ssl_posture_sha256','pii_ssl_posture_other','pii_ssl_posture_nocert','login_https','login_http','login_ssl_posture_md5','login_ssl_posture_sha1','login_ssl_posture_sha256','login_ssl_posture_other','login_ssl_posture_nocert','first_party_cookie_violation_https','first_party_cookie_violation_http','third_party_cookie_violation_https','third_party_cookie_violation_http']
-
+    _label_colors = [
+        'red','green','blue','purple','brown','gray','yellow','bronze','lime','teal','pink','silver']
     #'cookies':('cookieDomain','cookieName')
     #'sslCerts':('issuerAlternativeNames','issuerCommonNames','issuerCountry','issuerLocality','issuerOrganizationalUnits','issuerOrganizations','issuerState','keyAlgorithm','keySize','organizationalUnits','organizations','selfSigned','serialNumber','sha1','sigAlgName','sigAlgOid','subjectAlternativeNames','subjectCommonNames','subjectCountry','subjectLocality','subjectOrganizationalUnits','subjectOrganizations','subjectState','validationType','version')
     #'webComponents':('name','type','version','cve,name','cve,cvssScore','cve,cvss3Summary,baseScore')
@@ -47,7 +48,7 @@ class Workspaces:
     def __init__(self, tenant_id=os.getenv("TENANT_ID"), subscription_id=os.getenv("SUBSCRIPTION_ID"), client_id=os.getenv("CLIENT_ID"), client_secret=os.getenv("CLIENT_SECRET"), workspace_name=os.getenv("WORKSPACE_NAME"), *args, **kwargs) -> None:
         if not (tenant_id and subscription_id and client_id and client_secret):
             logging.error('missing a required argument. check your .env file for missing CLIENT_ID, CLIENT_SECRET, TENANT_ID, and/or SUBSCRIPTION_ID values')
-            raise Exception(f"CLIENT_ID: {client_id}, CLIENT_SECRET: {client_secret}, TENANT_ID: {tenant_id}, SUBSCRIPTION_ID: {subscription_id}")
+            raise Exception(f"CLIENT_ID: {client_id}, CLIENT_SECRET: {client_secret[:5] + ('*' * 30)}, TENANT_ID: {tenant_id}, SUBSCRIPTION_ID: {subscription_id}")
         self._tenant_id = tenant_id
         self._subscription_id = subscription_id
         self._client_id = client_id
@@ -56,7 +57,8 @@ class Workspaces:
         self._cp_token = self.__bearer_token__()
         self._dp_token = self.__bearer_token__(data_plane=True)
         self._workspaces = requests.structures.CaseInsensitiveDict()
-        self._expiry = int()
+        self._region = os.getenv("EASM_REGION")
+        self._resource_group = os.getenv("RESOURCE_GROUP_NAME")
         self.get_workspaces(workspace_name=workspace_name)
 
     def __bearer_token__(self, data_plane=False):
@@ -77,10 +79,10 @@ class Workspaces:
 
     def __token_expiry__(self, token):
         try:
-            self._expiry = jwt.decode(token, options={"verify_signature": False})['exp']
+            expiry = jwt.decode(token, options={"verify_signature": False})['exp']
             now = int(time.time())
-            if now - 30 >= self._expiry:
-                logging.debug(f"{now} - 30 >= {self._expiry}")
+            if now - 30 >= expiry:
+                logging.debug(f"{now} - 30 >= {expiry}")
                 return(True)
             else:
                 return(False)
@@ -116,7 +118,6 @@ class Workspaces:
     def __set_default_workspace_name__(self, workspace_name):
         self._default_workspace_name = workspace_name
         logging.info(f"default workspace name set: {workspace_name}")
-        return(self._default_workspace_name)
 
     def __verify_workspace__(self, workspace_name):
         if workspace_name not in self._workspaces:
@@ -155,12 +156,10 @@ class Workspaces:
             logging.error(f"{workspace_name} not found")
             raise Exception(workspace_name)
 
-    def __asset_content_helper__(self, response_object, content_list=[], asset_list_name='', asset_id='', get_recent=True, last_seen_days_back=30, date_range_start='', date_range_end=''):
+    def __asset_content_helper__(self, response_object, asset_list_name='', asset_id='', get_recent=True, last_seen_days_back=30, date_range_start='', date_range_end=''):
         if asset_list_name:
-            content_list.extend(response_object.json()['content'])
-            for asset in content_list:
+            for asset in response_object.json()['content']:
                 getattr(self, asset_list_name).__add_asset__(Asset().__parse_workspace_assets__(asset, get_recent=get_recent, last_seen_days_back=last_seen_days_back, date_range_start=date_range_start, date_range_end=date_range_end))
-                #self.assets.__add_asset__(Asset().__parse_workspace_assets__(asset))
         elif asset_id:
             getattr(self, asset_id).__parse_workspace_assets__(response_object.json(), get_recent=get_recent, last_seen_days_back=last_seen_days_back, date_range_start=date_range_start, date_range_end=date_range_end)
         else:
@@ -494,10 +493,30 @@ class Workspaces:
                 else:
                     logging.warning(f"{r.status_code} -- called by: {calling_func} -- endpoint: {endpoint} -- page: {helper_params.get('skip')} -- attempt: {retry_counter} of {max_retry} -- error: {r.text}")
                     retry_counter += 1
+                    if data_plane:
+                        if self.__token_expiry__(self._dp_token):
+                            self._dp_token = self.__bearer_token__(data_plane=True)
+                        token = self._dp_token
+                        helper_headers = {'Authorization': f"Bearer {token}"}
+                    else:
+                        if self.__token_expiry__(self._cp_token):
+                            self._dp_token = self.__bearer_token__()
+                        token = self._cp_token
+                        helper_headers = {'Authorization': f"Bearer {token}"}
 
             except Exception as e:
                 logging.warning(f"called by: {calling_func} -- endpoint: {endpoint} -- page: {helper_params.get('skip')} -- attempt: {retry_counter} of {max_retry} -- error: {str(e)}")
                 retry_counter += 1
+                if data_plane:
+                    if self.__token_expiry__(self._dp_token):
+                        self._dp_token = self.__bearer_token__(data_plane=True)
+                    token = self._dp_token
+                    helper_headers = {'Authorization': f"Bearer {token}"}
+                else:
+                    if self.__token_expiry__(self._cp_token):
+                        self._dp_token = self.__bearer_token__()
+                    token = self._cp_token
+                    helper_headers = {'Authorization': f"Bearer {token}"}
         return(r)
 
     def get_workspaces(self, workspace_name=''):
@@ -512,24 +531,40 @@ class Workspaces:
                 logging.info(f"{workspace_name} not found in subscription {self._subscription_id}")
         else:
             for workspace in r.json()['value']:
-                self._workspaces[workspace['name']] = f"{workspace['properties']['dataPlaneEndpoint']}{workspace['id'].replace('/providers/Microsoft.Easm','')}"
+                self._workspaces[workspace['name']] = (f"{workspace['properties']['dataPlaneEndpoint']}{workspace['id'].replace('/providers/Microsoft.Easm','')}",f"management.azure.com{workspace['id']}")
             logging.info(f"Found workspaces:\n {self._workspaces}")
-        return(self._workspaces)
+        if not self._default_workspace_name:
+            if len(self._workspaces.keys()) == 1:
+                self.__set_default_workspace_name__(next(iter(self._workspaces)))
+            else:
+                print("no WORKSPACE_NAME set in the ENVIRONMENT .env file\nmake sure to manually set one of the following as the default or provide it as a workspace_name='<XXX>' argument to a subsequent function\n")
+                for k in self._workspaces.keys():
+                    print(f"\t{k}")
 
-    def create_workspace(self, resource_group_name, location, workspace_name=''):
-        if location not in self._locations:
-            logging.error(f"{location} must be one of {', '.join(self._locations)}")
-            raise ValueError(location)
+    def create_workspace(self, resource_group_name=None, region=None, workspace_name=None):
+        if not resource_group_name:
+            resource_group_name = self._resource_group
+            if not resource_group_name:
+                logging.error("a RESOURCE_GROUP_NAME must be set in ENVIRONMENT .env file, or passed during Workspaces() initialization, or in this function via resource_group_name=='<easm_rg_name>'")
+                raise Exception('no resource_group_name')
+        if not region:
+            region = self._region
+            if region and region not in self._easm_regions:
+                logging.error(f"region {region} must be one of {', '.join(self._easm_regions)}")
+                raise Exception(region)
+            else:
+                logging.error("an EASM_REGION must be set in ENVIRONMENT .env file, or passed during Workspaces() initialization, or in this function via region=='<easm_region_name>'")
+                raise Exception('no region')
         if not workspace_name:
             workspace_name = self._default_workspace_name
             if not workspace_name:
-                logging.error(f"a workspace name must be passed either during Workspaces() initialization or in this function via workspace_name='<customer_or_workspace_name>'")
-                raise Exception('no workspace name')
+                logging.error("a WORKSPACE_NAME must be set in ENVIRONMENT .env file, or passed during Workspaces() initialization, or in this function via workspace_name='<easm_workspace_name>'")
+                raise Exception('no workspace_name')
         if self.__verify_workspace__(workspace_name):
             return({workspace_name: self._workspaces[workspace_name]})
         else:
             url = f"https://management.azure.com/subscriptions/{self._subscription_id}/resourceGroups/{resource_group_name}/providers/Microsoft.Easm"
-            payload = {'location': location}
+            payload = {'location': region}
             r = self.__workspace_query_helper__('create_workspace', method='put', endpoint=f"workspaces/{workspace_name}", url=url, payload=payload, data_plane=False, workspace_name=workspace_name)
             self._workspaces[workspace_name] = (f"{r.json()['properties']['dataPlaneEndpoint']}{r.json()['id'].replace('/providers/Microsoft.Easm','')}",f"management.azure.com{r.json()['id']}")
             self.__set_default_workspace_name__(r.json()['name'])
@@ -633,7 +668,7 @@ class Workspaces:
             logging.error(f"{workspace_name} not found")
             raise Exception(workspace_name)
 
-    def get_workspace_assets(self, query_filter, asset_list_name='', page=0, max_page_size=25, max_page_count=0, get_all=False, auto_create_facet_filters=True, get_recent=True, last_seen_days_back=30, date_range_start='', date_range_end='', workspace_name=''):
+    def get_workspace_assets(self, query_filter, asset_list_name='', page=0, max_page_size=25, max_page_count=0, get_all=False, auto_create_facet_filters=True, get_recent=True, last_seen_days_back=30, date_range_start='', date_range_end='', workspace_name='', **kwargs):
         """query_filter must be a valid MDEASM query, e.g.:
         
             state = "confirmed" AND kind = "domain"
@@ -681,26 +716,36 @@ class Workspaces:
         if not workspace_name:
             workspace_name = self._default_workspace_name
         if self.__verify_workspace__(workspace_name):
-            if asset_list_name:
+            if asset_list_name and not hasattr(self, asset_list_name):
                 setattr(self, asset_list_name, AssetList())
-            else:
+            elif not asset_list_name:
                 asset_list_name = 'assetList'
                 setattr(self, asset_list_name, AssetList())
+            elif asset_list_name and hasattr(self, asset_list_name) and isinstance(getattr(self, asset_list_name), AssetList):
+                pass
+            
             if max_page_size > 100:
+                logging.warning('max_page_size cannot be greater than 100, setting max_page_size=100')
                 max_page_size = 100
             elif max_page_size < 1:
+                logging.warning('max_page_size cannot be less than 1, setting max_page_size=1')
                 max_page_size = 1
+            
             if max_page_count:
                 get_all=True
             
             params = {'filter': query_filter, 'skip': page, 'maxpagesize': max_page_size}
             run_query=True
             page_counter=0
+            time_counter_start=datetime.datetime.now().replace(microsecond=0)
             while run_query:
                 r = self.__workspace_query_helper__('get_workspace_assets', method='get', endpoint='assets', params=params, workspace_name=workspace_name)
-            
-                content = []
-                self.__asset_content_helper__(r, content_list=content, asset_list_name=asset_list_name, get_recent=get_recent, last_seen_days_back=last_seen_days_back, date_range_start=date_range_start, date_range_end=date_range_end)
+                
+                total_assets = r.json()['totalElements']
+                if page_counter == 0:
+                    print(f"{time_counter_start.strftime('%d-%b-%y %H:%M:%S')} -- {total_assets} assets identified by query")
+
+                self.__asset_content_helper__(r, asset_list_name=asset_list_name, get_recent=get_recent, last_seen_days_back=last_seen_days_back, date_range_start=date_range_start, date_range_end=date_range_end)
                 
                 page_counter+=1
                 
@@ -713,13 +758,23 @@ class Workspaces:
                 else:
                     page = r.json()['number'] + 1
                     params['skip'] = page
+                    
+                    #a counter for tracking and printing assets retrieved + estimated time left until completion
+                    #can modify by passing kwarg track_every_N_pages=NN (defaults to every 100 pages)
+                    #can disable tracking and printing completely by passing kwarg no_track_time=True
+                    if not (page_counter % kwargs.get('track_every_N_pages', 100) or kwargs.get('no_track_time')):
+                        time_counter_diff = (datetime.datetime.now().replace(microsecond=0) - time_counter_start)
+                        assets_so_far = (page_counter * max_page_size)
+                        
+                        print(f"\nretrieved {assets_so_far} assets in {time_counter_diff}\nestimated time for remaining {total_assets - assets_so_far} assets: {str((time_counter_diff * (total_assets/assets_so_far)) - time_counter_diff).split('.')[0]}")
+            
+            print(f"\n{datetime.datetime.now().strftime('%d-%b-%y %H:%M:%S')} -- query complete, {len(getattr(self, asset_list_name).assets)} assets retrieved\ncan check available asset lists via <mdeasm.Workspaces object>.asset_lists()")
             
             if auto_create_facet_filters:
-                logging.info(f"auto-creating facet filters for all asset in asset list: {asset_list_name}")
+                print(f"\nautomatically creating facet filters for all assets in asset list: {asset_list_name}")
                 self.__facet_filter_helper__(asset_list_name=asset_list_name)
+                print(f"\n{datetime.datetime.now().strftime('%d-%b-%y %H:%M:%S')} -- facet filters created\ncan check available filters via <mdeasm.Workspaces object>.facet_filters()")
 
-            #print(f"query complete, asset list available at <mdeasm.Workspaces object>.{asset_list_name}.assets")
-            #return(getattr(self, asset_list_name))
         else:
             logging.error(f"{workspace_name} not found")
             raise Exception(workspace_name)
@@ -1021,14 +1076,14 @@ class Workspaces:
         return(out_dict)
 
     def create_or_update_label(self, name, color='', display_name='', workspace_name='', **kwargs):
-        """submitting the 'name' of an already-created label will update it to whatever are submitted for 'color' and 'displayName'
+        """passing the 'name' of an already-created label will update it to the values submitted for 'color' and 'displayName'
         
-        optional arg 'color' must be one of red,green,blue,purple,brown,gray,yellow. submitting anything else (or omitting) will default to 'blue'
+        optional arg 'color' must be one of 'red','green','blue','purple','brown','gray','yellow','bronze','lime','teal','pink','silver'. submitting anything else (or omitting) will default to 'blue'
         
         if optional arg 'display_name' is not submitted, it will default to the same as 'name'
         """
-        if color and color not in ('red','green','blue','purple','brown','gray','yellow'):
-            logging.warning(f"{color} not one of red,green,blue,purple,brown,gray,yellow; setting to default")
+        if color and color not in self._label_colors:
+            logging.warning(f"{color} not one of {','.join(self._label_colors)}; setting to default")
             color = 'blue'
         elif not color:
             color = 'blue'
@@ -1039,7 +1094,7 @@ class Workspaces:
         if self.__verify_workspace__(workspace_name):
             label_endpoint = f"/labels/{name}"
             label_payload = {'properties': {'color':color,'displayName':display_name}}
-            r = self.__workspace_query_helper__('get_workspaces', method='put', endpoint=label_endpoint, payload=label_payload, data_plane=False, workspace_name=workspace_name)
+            r = self.__workspace_query_helper__('create_or_update_label', method='put', endpoint=label_endpoint, payload=label_payload, data_plane=False, workspace_name=workspace_name)
             
             label_properties = {'color':r.json()['properties'].get('color'),'displayName':r.json()['properties'].get('displayName')}
             if kwargs.get('noprint'):
@@ -1056,7 +1111,7 @@ class Workspaces:
             workspace_name = self._default_workspace_name
         if self.__verify_workspace__(workspace_name):
             label_endpoint = f"/labels"
-            r = self.__workspace_query_helper__('get_workspaces', method='get', endpoint=label_endpoint, data_plane=False, workspace_name=workspace_name)
+            r = self.__workspace_query_helper__('get_labels', method='get', endpoint=label_endpoint, data_plane=False, workspace_name=workspace_name)
             
             label_properties = {}
             for label in r.json()['value']:

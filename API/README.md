@@ -3,27 +3,34 @@ MD External Attack Surface Management API helpers and examples.
 
 All these are based on the mdeasm.py helper. It is easiest to import it into the use case scripts and jupyter notebook if it is in the same directory.
 
+
+## Environment file
+
+1. copy the `.env.template` file to `.env` in the project root directory
+2. modify with your specific tenant, subscription, service principal, etc
+
+## Required Python package imports
+
+requests, jwt, python-dateutil, python-dotenv
+```
+python3 -m pip install requests jwt python-dateutil python-dotenv --upgrade
+```
 ### Initialize your mdeasm.Workspaces object:
 ```
 import mdeasm
 ```
 ```
-easm = mdeasm.Workspaces(  
-    workspace_name=<workspace_name>,  
-    tenant_id=<tenant_id>,  
-    subscription_id=<subscription_id>,  
-    client_id=<client_id>,  
-    client_secret=<client_secret>)
+#can pass arguments to override or supplement .env defaults
+easm = mdeasm.Workspaces()
 ```
 ### Interact with MDEASM Workspaces
 ```
+#can pass arguments to override or supplement .env defaults
 easm.get_workspaces()
 ```
 ```
-easm.create_workspace(  
-    resource_group_name=<resource_group>,  
-    location=<oneOf---easm._locations>,  
-    workspace_name=<new_workspace_name>)
+#can pass arguments to override or supplement .env defaults
+easm.create_workspace()
 ```
 ### Retrieve MDEASM Workspace Assets and Risk Findings
 ```

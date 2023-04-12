@@ -1,0 +1,8 @@
+let workspace = '{_easm_workspace_name}';
+let lastseen = 30d;
+let oldestsnapshot = EasmAsset|where WorkspaceName == workspace|summarize by SnapshotDateTime|sort by SnapshotDateTime asc|take 1;
+EasmAsset
+|where WorkspaceName == workspace
+|join kind=anti oldestsnapshot on SnapshotDateTime
+|where AssetType == 'SSL_CERT'
+|summarize Count=count() by AssetType,SnapshotDateTime

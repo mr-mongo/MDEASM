@@ -1,0 +1,14 @@
+let workspace = '{_easm_workspace_name}';
+let lastseen = 30d;
+let oldestsnapshot = EasmAsset|where WorkspaceName == workspace|summarize by SnapshotDateTime|sort by SnapshotDateTime asc|take 1;
+EasmIpAddressAsset
+|where WorkspaceName == workspace
+|join kind=anti oldestsnapshot on SnapshotDateTime
+|summarize hint.strategy=shuffle arg_max(SnapshotDateTime, *) by AssetUuid
+|where array_length(IpBlocks) > 0
+|extend ReversedBlock = array_reverse(IpBlocks)
+|extend IpBlock = array_slice(ReversedBlock,0,0)
+|extend IpBlock = tostring(strcat_array(IpBlock,''))
+|where isnotempty(IpBlock)
+|summarize Count=count() by IpBlock
+|sort by Count {_easm_ip_sort_order}

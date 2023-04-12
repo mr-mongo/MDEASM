@@ -1,0 +1,12 @@
+let workspace = '{_easm_workspace_name}';
+let lastseen = 30d;
+let oldestsnapshot = EasmAsset|where WorkspaceName == workspace|summarize by SnapshotDateTime|sort by SnapshotDateTime asc|take 1;
+EasmRisk
+|where WorkspaceName == workspace
+|where AssetLastSeen > ago(lastseen)
+|where CategoryName startswith_cs 'High'
+|extend Priority = 'High'
+|project-keep Priority,MetricDisplayName,SnapshotDateTime,AssetName
+|summarize hint.strategy=shuffle arg_max(SnapshotDateTime, *) by Priority,MetricDisplayName,AssetName
+|summarize Count=count() by Priority,MetricDisplayName
+|order by Count desc 

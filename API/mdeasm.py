@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-_VERSION = 1.4
+_VERSION = 1.5
 # Created by Josh Randall
 # jorandall@microsoft.com
 # 
@@ -43,7 +43,7 @@ class Workspaces:
     #'sslCerts':('issuerAlternativeNames','issuerCommonNames','issuerCountry','issuerLocality','issuerOrganizationalUnits','issuerOrganizations','issuerState','keyAlgorithm','keySize','organizationalUnits','organizations','selfSigned','serialNumber','sha1','sigAlgName','sigAlgOid','subjectAlternativeNames','subjectCommonNames','subjectCountry','subjectLocality','subjectOrganizationalUnits','subjectOrganizations','subjectState','validationType','version')
     #'webComponents':('name','type','version','cve,name','cve,cvssScore','cve,cvss3Summary,baseScore')
     _facet_filters = {
-        'assetSecurityPolicies':('policyName','description'),'attributes':('attributeType','attributeValue'),'banners':('banner','port'),'cookies':('cookieName'),'finalIpBlocks':('ipBlock'),'headers':('headerName','headerValue'),'ipBlocks':('ipBlock'),'location':('value,countrycode','value,countryname','value,latitude','value,longitude'),'reputations':('threatType','listName'),'resourceUrls':('url'),'responseHeaders':('headerName','headerValue'),'services':('port','scheme','portStates,value'),'soaRecords':('nameServer','email','serialNumber'),'sslServerConfig':('cipherSuites','tlsVersions'),'webComponents':('name','type','version'),'cveId':('webComponent','name','cvssScore')}
+        'assetSecurityPolicies':('policyName','description'),'attributes':('attributeType','attributeValue'),'banners':('banner','port'),'cookies':('cookieName'),'finalIpBlocks':('ipBlock'),'headers':('headerName','headerValue'),'ipBlocks':('ipBlock'),'location':('value,countrycode','value,countryname','value,latitude','value,longitude'),'reputations':('threatType','listName'),'resourceUrls':('url'),'responseHeaders':('headerName','headerValue'),'services':('port','scheme','portStates,value'),'soaRecords':('nameServer','email','serialNumber'),'sslServerConfig':('cipherSuites','tlsVersions'),'webComponents':('name','type','version'),'cveId':('webComponent','name','cvssScore','cweId')}
 
     def __init__(self, tenant_id=os.getenv("TENANT_ID"), subscription_id=os.getenv("SUBSCRIPTION_ID"), client_id=os.getenv("CLIENT_ID"), client_secret=os.getenv("CLIENT_SECRET"), workspace_name=os.getenv("WORKSPACE_NAME"), *args, **kwargs) -> None:
         if not (tenant_id and subscription_id and client_id and client_secret):
@@ -56,6 +56,8 @@ class Workspaces:
         self._default_workspace_name = workspace_name
         self._cp_token = self.__bearer_token__()
         self._dp_token = self.__bearer_token__(data_plane=True)
+        self._api_version_cp = '2023-04-01-preview'
+        self._api_version_dp = '2023-05-01-preview'
         self._workspaces = requests.structures.CaseInsensitiveDict()
         self._region = os.getenv("EASM_REGION")
         self._resource_group = os.getenv("RESOURCE_GROUP_NAME")
@@ -142,14 +144,14 @@ class Workspaces:
             if disco_name:
                 disco_results[disco_name] = []
                 r = self.__workspace_query_helper__('__get_discovery_group_runs__', method='get', endpoint=f"discoGroups/{disco_name}/runs", workspace_name=workspace_name)
-                for run in r.json()['content']:
+                for run in r.json()['value']:
                     disco_results[disco_name].append({'state':run['state'], 'submittedDate':run['submittedDate'], 'completedDate':run['completedDate'], 'totalAssetsFoundCount':run['totalAssetsFoundCount']})
             else:
-                disco_names = list(set([run['name'] for run in self.get_discovery_groups(workspace_name)['content']]))
+                disco_names = list(set([run['name'] for run in self.get_discovery_groups(workspace_name)['value']]))
                 for disco in disco_names:
                     disco_results[disco] = []
                     r = self.__workspace_query_helper__('__get_discovery_group_runs__', method='get', endpoint=f"discoGroups/{disco}/runs", workspace_name=workspace_name)
-                    for run in r.json()['content']:
+                    for run in r.json()['value']:
                         disco_results[disco].append({'state':run['state'], 'submittedDate':run['submittedDate'], 'completedDate':run['completedDate'], 'totalAssetsFoundCount':run['totalAssetsFoundCount']})
             return(disco_results)
         else:
@@ -158,7 +160,7 @@ class Workspaces:
 
     def __asset_content_helper__(self, response_object, asset_list_name='', asset_id='', get_recent=True, last_seen_days_back=30, date_range_start='', date_range_end=''):
         if asset_list_name:
-            for asset in response_object.json()['content']:
+            for asset in response_object.json()['value']:
                 getattr(self, asset_list_name).__add_asset__(Asset().__parse_workspace_assets__(asset, get_recent=get_recent, last_seen_days_back=last_seen_days_back, date_range_start=date_range_start, date_range_end=date_range_end))
         elif asset_id:
             getattr(self, asset_id).__parse_workspace_assets__(response_object.json(), get_recent=get_recent, last_seen_days_back=last_seen_days_back, date_range_start=date_range_start, date_range_end=date_range_end)
@@ -462,17 +464,22 @@ class Workspaces:
             token = self._cp_token
         if url:
             helper_url = f"{url}/{urllib.parse.quote(endpoint)}"
+            helper_params = {'api-version': self._api_version_cp}
         elif workspace_name and data_plane:
             helper_url = f"https://{self._workspaces[workspace_name][0]}/{urllib.parse.quote(endpoint)}"
+            helper_params = {'api-version': self._api_version_dp}
         elif workspace_name and not data_plane:
             helper_url = f"https://{self._workspaces[workspace_name][1]}/{urllib.parse.quote(endpoint)}"
+            helper_params = {'api-version': self._api_version_cp}
         elif not workspace_name and data_plane:
             helper_url = f"https://{self._workspaces[self._default_workspace_name][0]}/{urllib.parse.quote(endpoint)}"
+            helper_params = {'api-version': self._api_version_dp}
         elif not workspace_name and not data_plane:
             helper_url = f"https://{self._workspaces[self._default_workspace_name][1]}/{urllib.parse.quote(endpoint)}"
+            helper_params = {'api-version': self._api_version_cp}
             
         helper_headers = {'Authorization': f"Bearer {token}"}
-        helper_params = {'api-version': '2022-04-01-preview'}
+        #helper_params = {'api-version': '2022-04-01-preview'}
         if params:
             helper_params.update(params)
         
@@ -576,7 +583,7 @@ class Workspaces:
         if self.__verify_workspace__(workspace_name):
             params = {'filter': org_name}
             r = self.__workspace_query_helper__('get_discovery_templates', method='get', endpoint='discoTemplates', params=params, workspace_name=workspace_name)
-            for org in r.json()['content']:
+            for org in r.json()['value']:
                 logging.info(org)
                 if org['name'][-1] != '.':
                     print(f"{org['name']}---{org['id']}")
@@ -753,10 +760,10 @@ class Workspaces:
                     run_query=False
                 elif max_page_count and page_counter >= max_page_count:
                     run_query=False
-                elif r.json()['last']:
+                elif page_counter * max_page_size >= total_assets:
                     run_query = False
                 else:
-                    page = r.json()['number'] + 1
+                    page = page + 1
                     params['skip'] = page
                     
                     #a counter for tracking and printing assets retrieved + estimated time left until completion
@@ -896,11 +903,16 @@ class Workspaces:
                     snapshot_payload = {'metric':val,'labelName':None,'page':0,'size':100}
                     asset_uuids = []
                     get_next = True
+                    page_counter = 0
                     while get_next:
                         r_snapshot = self.__workspace_query_helper__('get_workspace_risk_observations', method='post', endpoint='reports/assets:snapshot', payload=snapshot_payload, workspace_name=workspace_name)
-                        for asset in r_snapshot.json()['assets']['content']:
+                        page_counter+=1
+                        total_assets = r_snapshot.json()['assets']['totalElements']
+                        for asset in r_snapshot.json()['assets']['value']:
                             asset_uuids.append(asset['uuid'])
-                        if r_snapshot.json()['assets']['last']:
+                        if page_counter * snapshot_payload['size'] >= total_assets:
+                            get_next = False
+                        elif len(asset_uuids) >= total_assets:
                             get_next = False
                         else:
                             snapshot_payload['page'] += 1
@@ -997,7 +1009,7 @@ class Workspaces:
                 out_path = out_path / file_name
                 out_path.parent.mkdir(parents=True, exist_ok=True)
                 with open(out_path, 'w') as f:
-                    f.write(','.join(facet_val['assets']))
+                    f.writelines('\n'.join(facet_val['assets']))
                     print(f"saving {search} query results to {out_path}")
             elif out_format == 'json':
                 file_name += '.json'
@@ -1211,7 +1223,7 @@ class Workspaces:
                 logging.error("no tasks found for workspace: {workspace_name}")
                 raise Exception
             else:
-                for task in r.json()['content']:
+                for task in r.json()['value']:
                     if task_id and task_id == task['id']:
                         print(f"\ntask id:\n\t{task['id']}")
                         print(f"task query:\n\t{task['metadata']['filter']}")

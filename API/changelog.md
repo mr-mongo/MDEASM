@@ -1,3 +1,13 @@
+**version 1.5**, JUN 2023  
+updated Control Plane and Data Plane API Versions  
+```
+    Control Plane: 2023-04-01-preview
+    Data Plane: 2023-05-01-preview
+```
+adjusted affeceted functions for updated api-version's response body (removed `last`, `number`, & `number`, changed `content` --> `value`)
+added `cweId` to cveId facet filter
+adjusted `query_facet_filter()` csv output to write each asset detail to a new line
+
 **version 1.4**, FEB 2023  
 moved to centralized environment mangement  
 adjusted `Workspaces.__init__()` to automatically retrieve ENV variables `TENANT_ID, SUBSCRIPTION_ID, CLIENT_ID, CLIENT_SECRET, WORKSPACE_NAME`  

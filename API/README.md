@@ -11,9 +11,9 @@ All these are based on the mdeasm.py helper. It is easiest to import it into the
 
 ## Required Python package imports
 
-requests, jwt, python-dateutil, python-dotenv
+requests, PyJWT, python-dateutil, python-dotenv
 ```
-python3 -m pip install requests jwt python-dateutil python-dotenv --upgrade
+python3 -m pip install requests PyJWT python-dateutil python-dotenv --upgrade
 ```
 ### Initialize your mdeasm.Workspaces object:
 ```

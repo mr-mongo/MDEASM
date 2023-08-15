@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.20.4.51522",
-      "templateHash": "15591707305485347254"
+      "templateHash": "9429106546098990581"
     }
   },
   "parameters": {
@@ -17,7 +17,7 @@
       "type": "string",
       "defaultValue": "[uniqueString(resourceGroup().id, utcNow())]"
     },
-    "easmRG": {
+    "easmResourceGroup": {
       "type": "string",
       "metadata": {
         "description": "The name of the EASM Resource Group"
@@ -217,7 +217,7 @@
               "type": "String"
             },
             "easm_rg": {
-              "defaultValue": "[parameters('easmRG')]",
+              "defaultValue": "[parameters('easmResourceGroup')]",
               "type": "String"
             },
             "easm_workspace": {

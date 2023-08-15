@@ -13,10 +13,6 @@
       "type": "string",
       "defaultValue": "[resourceGroup().location]"
     },
-    "uniqueId": {
-      "type": "string",
-      "defaultValue": "[uniqueString(resourceGroup().id, utcNow())]"
-    },
     "easmResourceGroup": {
       "type": "string",
       "metadata": {

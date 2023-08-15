@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.20.4.51522",
-      "templateHash": "9429106546098990581"
+      "templateHash": "5804374664488904862"
     }
   },
   "parameters": {
@@ -234,10 +234,19 @@
             }
           },
           "triggers": {
-            "Recurrence": {
+            "Run_Every_Week": {
               "recurrence": {
                 "frequency": "Week",
-                "interval": 1
+                "interval": 1,
+                "schedule": {
+                  "hours": [
+                    "0"
+                  ],
+                  "weekDays": [
+                    "Monday"
+                  ]
+                },
+                "timeZone": "UTC"
               },
               "evaluatedRecurrence": {
                 "frequency": "Week",

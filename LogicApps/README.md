@@ -9,7 +9,7 @@ This template will:
      2. EASM Resource Group Contributor for the Logic App's managed identity to allow it to read and write to the EASM Workspace
 
 The Logic App will run immediately on deployment, and then every 1 week on Monday, 00:00 UTC. The recurrence is configurable within the Logic App's trigger.
- This first run **will fail** due to the role assignments not having enough time to propagate. You can re-run the Logic App manually or wait for the next scheduled recurrence. 
+  This first run **will fail** due to the role assignments not having enough time to propagate. You can re-run the Logic App manually or wait for the next scheduled recurrence. 
 
 The `Deploy to Azure` button below will only use the ARM template and parameters JSON file. These were generated from a Bicep template, which is included here for reference.
 

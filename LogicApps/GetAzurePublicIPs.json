@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.20.4.51522",
-      "templateHash": "4864237500537138014"
+      "templateHash": "15591707305485347254"
     }
   },
   "parameters": {
@@ -35,7 +35,7 @@
         "description": "Client ID of the Service Principal to assign Contributor rights to EASM Resource Group"
       }
     },
-    "keyVaultSecretSPValue": {
+    "servicePrincipalClientSecret": {
       "type": "securestring",
       "metadata": {
         "description": "Client Secret of the Service Principal which will be stored in the Key Vault"
@@ -121,7 +121,7 @@
       "apiVersion": "2021-10-01",
       "name": "[format('{0}/{1}', variables('key_vault_name'), variables('key_vault_secret_name'))]",
       "properties": {
-        "value": "[parameters('keyVaultSecretSPValue')]"
+        "value": "[parameters('servicePrincipalClientSecret')]"
       },
       "dependsOn": [
         "[resourceId('Microsoft.KeyVault/vaults', variables('key_vault_name'))]"

@@ -1,7 +1,6 @@
-# MDEASM
- MD External Attack Surface Management Logic App for importing Azure Public IPs into a Workspace
+#### Logic App for importing Azure Public IPs into an EASM Workspace
 
-### REQUIRED: a Service Principal (a.k.a. AzureAD App Registration) which you know the Client ID and Client Secret
+##### REQUIRED: a Service Principal (a.k.a. AzureAD App Registration) for which you know the Client ID and Client Secret
 
 This template will:
   1. Create a Key Vault and add the Client Secret

@@ -29,19 +29,16 @@ var asset_state_mapping = {
   'Requires Investigation': 'candidateInvestigate'
 }
 
-resource resourceGroupRoleAssignmentContributor 'Microsoft.Authorization/roleAssignments@2020-10-01-preview' = {
-  name: guid(resourceGroup().id, uniqueId)
-  scope: resourceGroup()
-  properties: {
+module resourceGroupRoleAssignmentContributor 'module_RoleAssignmentContributor.bicep' = {
+  name: 'resourceGroupRoleAssignmentContributor'
+  scope: resourceGroup(easmResourceGroup)
+  params: {
     principalId: MDEASM_GetAzurePublicIPs_LogicApp.identity.principalId
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')
-    principalType: 'ServicePrincipal'
   }
 }
 
-
 module subscriptionRoleAssignmentReader 'module_RoleAssignmentReader.bicep' = {
-  name: guid(resourceGroup().id, uniqueId)
+  name: 'subscriptionRoleAssignmentReader'
   scope: subscription()
   params: {
     principalId: MDEASM_GetAzurePublicIPs_LogicApp.identity.principalId

@@ -12,4 +12,6 @@ This template will:
      3. EASM Resource Group Contributor for the Logic App's managed identity to allow it to create Labels
      4. EASM Resource Group Contributor for the Service Principal to allow it to add the Azure Public IPs to the EASM Workspace
 
+The `Deploy to Azure` button below will only use the ARM template. The corresponding Bicep template is included here simply for reference.
+
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmr-mongo%2FMDEASM%2Fmain%2FLogicApps%2FGetAzurePublicIPs.json)

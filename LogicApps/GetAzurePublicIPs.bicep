@@ -2,7 +2,7 @@ param location string = resourceGroup().location
 param appNameSuffix string = uniqueString(resourceGroup().id, utcNow())
 
 @description('The name of the EASM Resource Group')
-param easmRG string
+param easmResourceGroup string
 
 @description('The name of the EASM Workspace')
 param easmWorkspace string
@@ -164,7 +164,7 @@ resource MDEASM_GetAzurePublicIPs_LogicApp 'Microsoft.Logic/workflows@2017-07-01
           type: 'String'
         }
         easm_rg: {
-          defaultValue: easmRG
+          defaultValue: easmResourceGroup
           type: 'String'
         }
         easm_workspace: {

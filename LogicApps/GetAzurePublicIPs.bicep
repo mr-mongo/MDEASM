@@ -12,7 +12,7 @@ param servicePrincipalClientID string
 
 @description('Client Secret of the Service Principal which will be stored in the Key Vault')
 @secure()
-param keyVaultSecretSPValue string
+param servicePrincipalClientSecret string
 
 @allowed([
   'premium'
@@ -73,7 +73,7 @@ resource keyVaultSecretEasm 'Microsoft.KeyVault/vaults/secrets@2021-10-01' = {
   name: key_vault_secret_name
   parent: keyVault
   properties: {
-    value: keyVaultSecretSPValue
+    value: servicePrincipalClientSecret
   }
 }
 

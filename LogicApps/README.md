@@ -4,7 +4,7 @@
 
 This template will:
   1. Create a Key Vault and add the Client Secret
-  2. Create a Logic App that will query the Azure REST API for Azure Public IPs and add them to an EASM Workspace
+  2. Create a Logic App that will query the Azure REST API for Azure Public IPs and add them to an EASM Workspace (**Note that the Logic App will run immediately after deployment, but will fail because the Role Assignments have not had enough time to propagate. You can either run it manually again after a minute or two or wait for the normal schedule.**)
   3. Create the following Role Assignments:
      1. Subscription Reader for the Logic App's managed identity to allow it to query the API for Public IPs
      2. Key Vault Secrets User for the Logic App's managed identity to allow it to get the Client Secret (**Note that you will need to assign yourself a RBAC permission, such as `Key Vault Administrator`, to be able to see and manage the secret**)

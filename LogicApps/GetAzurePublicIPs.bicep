@@ -1,28 +1,11 @@
 param location string = resourceGroup().location
-param appNameSuffix string = uniqueString(resourceGroup().id, utcNow())
+param uniqueId string = uniqueString(resourceGroup().id, utcNow())
 
 @description('The name of the EASM Resource Group')
 param easmResourceGroup string
 
 @description('The name of the EASM Workspace')
 param easmWorkspace string
-
-@description('Client ID of the Service Principal to assign Contributor rights to EASM Resource Group')
-param servicePrincipalClientID string
-
-@description('Client Secret of the Service Principal which will be stored in the Key Vault')
-@secure()
-param servicePrincipalClientSecret string
-
-@allowed([
-  'premium'
-  'standard'
-])
-@description('Key Vault SKU name')
-param keyVaultSku string = 'standard'
-
-@description('The name of the Key Vault resource')
-param kvName string = 'kv-mdeasm'
 
 @allowed([
   'Approved'
@@ -37,10 +20,7 @@ param assetState string = 'Dependency'
 @description('Label to asssign to the IPs in the EASM Workspace')
 param assetLabel string = 'AzureIP'
 
-var key_vault_secret_name = 'mdeasm-service-principal'
 var logic_app_name = 'GetAzurePublicIPs'
-var key_vault_name = '${kvName}-${appNameSuffix}'
-var connections_key_vault_name = 'keyvault-${appNameSuffix}'
 var asset_state_mapping = {
   Approved: 'confirmed'
   Candidate: 'candidate'
@@ -49,62 +29,8 @@ var asset_state_mapping = {
   'Requires Investigation': 'candidateInvestigate'
 }
 
-resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' = {
-  name: key_vault_name
-  location: location
-  properties: {
-    sku: {
-      family: 'A'
-      name: keyVaultSku
-    }
-    tenantId: subscription().tenantId
-    enabledForDeployment: false
-    enabledForDiskEncryption: false
-    enabledForTemplateDeployment: false
-    enableRbacAuthorization: true
-    networkAcls: {
-      defaultAction: 'Allow'
-      bypass: 'AzureServices'
-    }
-  }
-}
-
-resource keyVaultSecretEasm 'Microsoft.KeyVault/vaults/secrets@2021-10-01' = {
-  name: key_vault_secret_name
-  parent: keyVault
-  properties: {
-    value: servicePrincipalClientSecret
-  }
-}
-
-resource logicAppKeyVaultConnection 'Microsoft.Web/connections@2018-07-01-preview' = {
-  name: connections_key_vault_name
-  location: location
-  kind: 'V1'
-  properties: {
-    displayName: 'keyvault'
-    api: {
-      id: subscriptionResourceId('Microsoft.Web/locations/managedApis', location, 'keyvault')
-    }
-    parameterValueType: 'Alternative'
-    alternativeParameterValues: {
-      vaultName: key_vault_name
-    }
-  }
-}
-
-resource keyVaultRoleAssignmentUser 'Microsoft.Authorization/roleAssignments@2020-10-01-preview' = {
-  name: guid(resourceGroup().id, keyVault.id)
-  scope: keyVault
-  properties: {
-    principalId: MDEASM_GetAzurePublicIPs_LogicApp.identity.principalId
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')
-    principalType: 'ServicePrincipal'
-  }
-}
-
-resource resourceGroupRoleAssignmentContributor_LogicApp 'Microsoft.Authorization/roleAssignments@2020-10-01-preview' = {
-  name: guid(resourceGroup().id, 'b24988ac-6180-42a0-ab88-20f7382dd24c')
+resource resourceGroupRoleAssignmentContributor 'Microsoft.Authorization/roleAssignments@2020-10-01-preview' = {
+  name: guid(resourceGroup().id, uniqueId)
   scope: resourceGroup()
   properties: {
     principalId: MDEASM_GetAzurePublicIPs_LogicApp.identity.principalId
@@ -113,18 +39,9 @@ resource resourceGroupRoleAssignmentContributor_LogicApp 'Microsoft.Authorizatio
   }
 }
 
-resource resourceGroupRoleAssignmentContributor_ServicePrincipal 'Microsoft.Authorization/roleAssignments@2020-10-01-preview' = {
-  name: guid(resourceGroup().id, servicePrincipalClientID)
-  scope: resourceGroup()
-  properties: {
-    principalId: servicePrincipalClientID
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')
-    principalType: 'ServicePrincipal'
-  }
-}
 
 module subscriptionRoleAssignmentReader 'module_RoleAssignmentReader.bicep' = {
-  name: 'subscriptionRoleAssignmentReader'
+  name: guid(resourceGroup().id, uniqueId)
   scope: subscription()
   params: {
     principalId: MDEASM_GetAzurePublicIPs_LogicApp.identity.principalId
@@ -143,16 +60,8 @@ resource MDEASM_GetAzurePublicIPs_LogicApp 'Microsoft.Logic/workflows@2017-07-01
       '$schema': 'https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#'
       contentVersion: '1.0.0.0'
       parameters: {
-        '$connections': {
-          defaultValue: {}
-          type: 'Object'
-        }
         asset_state: {
           defaultValue: asset_state_mapping[assetState]
-          type: 'String'
-        }
-        client_id: {
-          defaultValue: servicePrincipalClientID
           type: 'String'
         }
         easm_label: {
@@ -181,10 +90,19 @@ resource MDEASM_GetAzurePublicIPs_LogicApp 'Microsoft.Logic/workflows@2017-07-01
         }
       }
       triggers: {
-        Recurrence: {
+        Run_Every_Week: {
           recurrence: {
             frequency: 'Week'
             interval: 1
+            schedule: {
+              hours: [
+                '0'
+              ]
+              weekDays: [
+                'Monday'
+              ]
+            }
+            timeZone: 'UTC'
           }
           evaluatedRecurrence: {
             frequency: 'Week'
@@ -204,10 +122,7 @@ resource MDEASM_GetAzurePublicIPs_LogicApp 'Microsoft.Logic/workflows@2017-07-01
           inputs: {
             authentication: {
               audience: environment().resourceManager
-              clientId: '@parameters(\'client_id\')'
-              secret: '@body(\'Get_SpSecret\')?[\'value\']'
-              tenant: '@parameters(\'tenant_id\')'
-              type: 'ActiveDirectoryOAuth'
+              type: 'ManagedServiceIdentity'
             }
             body: '@json(concat(\'{"properties":{"displayName":"\',parameters(\'easm_label\'),\'"}}\'))'
             method: 'PUT'
@@ -235,10 +150,7 @@ resource MDEASM_GetAzurePublicIPs_LogicApp 'Microsoft.Logic/workflows@2017-07-01
               inputs: {
                 authentication: {
                   audience: 'https://easm.defender.microsoft.com/'
-                  clientId: '@parameters(\'client_id\')'
-                  secret: '@body(\'Get_SpSecret\')?[\'value\']'
-                  tenant: '@parameters(\'tenant_id\')'
-                  type: 'ActiveDirectoryOAuth'
+                  type: 'ManagedServiceIdentity'
                 }
                 method: 'GET'
                 queries: {
@@ -257,10 +169,7 @@ resource MDEASM_GetAzurePublicIPs_LogicApp 'Microsoft.Logic/workflows@2017-07-01
               inputs: {
                 authentication: {
                   audience: 'https://easm.defender.microsoft.com/'
-                  clientId: '@parameters(\'client_id\')'
-                  secret: '@body(\'Get_SpSecret\')?[\'value\']'
-                  tenant: '@parameters(\'tenant_id\')'
-                  type: 'ActiveDirectoryOAuth'
+                  type: 'ManagedServiceIdentity'
                 }
                 body: '@variables(\'update_body\')'
                 headers: {
@@ -352,23 +261,6 @@ resource MDEASM_GetAzurePublicIPs_LogicApp 'Microsoft.Logic/workflows@2017-07-01
             }
           }
         }
-        Get_SpSecret: {
-          runAfter: {
-            Initialize_update_body: [
-              'Succeeded'
-            ]
-          }
-          type: 'ApiConnection'
-          inputs: {
-            host: {
-              connection: {
-                name: '@parameters(\'$connections\')[\'keyvault\'][\'connectionId\']'
-              }
-            }
-            method: 'get'
-            path: '/secrets/@{encodeURIComponent(\'${key_vault_secret_name}\')}/value'
-          }
-        }
         Get_Workspace_Label: {
           runAfter: {
             Set_deduped_public_ips: [
@@ -379,10 +271,7 @@ resource MDEASM_GetAzurePublicIPs_LogicApp 'Microsoft.Logic/workflows@2017-07-01
           inputs: {
             authentication: {
               audience: environment().resourceManager
-              clientId: '@parameters(\'client_id\')'
-              secret: '@body(\'Get_SpSecret\')?[\'value\']'
-              tenant: '@parameters(\'tenant_id\')'
-              type: 'ActiveDirectoryOAuth'
+              type: 'ManagedServiceIdentity'
             }
             headers: {
               Authorization: ''
@@ -424,7 +313,7 @@ resource MDEASM_GetAzurePublicIPs_LogicApp 'Microsoft.Logic/workflows@2017-07-01
         }
         List_Resource_Topologies: {
           runAfter: {
-            Get_SpSecret: [
+            Initialize_update_body: [
               'Succeeded'
             ]
           }
@@ -469,21 +358,6 @@ resource MDEASM_GetAzurePublicIPs_LogicApp 'Microsoft.Logic/workflows@2017-07-01
       }
       outputs: {}
     }
-    parameters: {
-      '$connections': {
-        value: {
-          keyvault: {
-            connectionId: logicAppKeyVaultConnection.id
-            connectionName: connections_key_vault_name
-            connectionProperties: {
-              authentication: {
-                type: 'ManagedServiceIdentity'
-              }
-            }
-            id: subscriptionResourceId('Microsoft.Web/locations/managedApis', location, 'keyvault')
-          }
-        }
-      }
-    }
+    parameters: {}
   }
 }

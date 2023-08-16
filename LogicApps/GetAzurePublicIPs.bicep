@@ -1,5 +1,4 @@
 param location string = resourceGroup().location
-param uniqueId string = uniqueString(resourceGroup().id, utcNow())
 
 @description('The name of the EASM Resource Group')
 param easmResourceGroup string

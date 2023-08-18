@@ -1,0 +1,480 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.20.4.51522",
+      "templateHash": "3428953908807011382"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]"
+    },
+    "easmResourceGroup": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the EASM Resource Group"
+      }
+    },
+    "easmWorkspace": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the EASM Workspace"
+      }
+    },
+    "assetState": {
+      "type": "string",
+      "defaultValue": "Dependency",
+      "allowedValues": [
+        "Approved",
+        "Candidate",
+        "Dependency",
+        "Monitor Only",
+        "Requires Investigation"
+      ],
+      "metadata": {
+        "description": "State to assign to the IPs in the EASM Workspace"
+      }
+    },
+    "assetLabel": {
+      "type": "string",
+      "defaultValue": "AzureIP",
+      "metadata": {
+        "description": "Label to asssign to the IPs in the EASM Workspace"
+      }
+    }
+  },
+  "variables": {
+    "logic_app_name": "GetAzurePublicIPs",
+    "asset_state_mapping": {
+      "Approved": "confirmed",
+      "Candidate": "candidate",
+      "Dependency": "associatedThirdparty",
+      "Monitor Only": "associatedPartner",
+      "Requires Investigation": "candidateInvestigate"
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Logic/workflows",
+      "apiVersion": "2017-07-01",
+      "name": "[variables('logic_app_name')]",
+      "location": "[parameters('location')]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "state": "Enabled",
+        "definition": {
+          "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "asset_state": {
+              "defaultValue": "[variables('asset_state_mapping')[parameters('assetState')]]",
+              "type": "String"
+            },
+            "easm_label": {
+              "defaultValue": "[parameters('assetLabel')]",
+              "type": "String"
+            },
+            "easm_location": {
+              "defaultValue": "[parameters('location')]",
+              "type": "String"
+            },
+            "easm_rg": {
+              "defaultValue": "[parameters('easmResourceGroup')]",
+              "type": "String"
+            },
+            "easm_workspace": {
+              "defaultValue": "[parameters('easmWorkspace')]",
+              "type": "String"
+            },
+            "subscription_id": {
+              "defaultValue": "[subscription().subscriptionId]",
+              "type": "String"
+            },
+            "tenant_id": {
+              "defaultValue": "[subscription().tenantId]",
+              "type": "String"
+            }
+          },
+          "triggers": {
+            "Run_Every_Week": {
+              "recurrence": {
+                "frequency": "Week",
+                "interval": 1,
+                "schedule": {
+                  "hours": [
+                    "0"
+                  ],
+                  "weekDays": [
+                    "Monday"
+                  ]
+                },
+                "timeZone": "UTC"
+              },
+              "evaluatedRecurrence": {
+                "frequency": "Week",
+                "interval": 1
+              },
+              "type": "Recurrence"
+            }
+          },
+          "actions": {
+            "Create_Label_if_not_exists": {
+              "runAfter": {
+                "Get_Workspace_Label": [
+                  "Failed"
+                ]
+              },
+              "type": "Http",
+              "inputs": {
+                "authentication": {
+                  "audience": "[environment().resourceManager]",
+                  "type": "ManagedServiceIdentity"
+                },
+                "body": "@json(concat('{\"properties\":{\"displayName\":\"',parameters('easm_label'),'\"}}'))",
+                "method": "PUT",
+                "queries": {
+                  "api-version": "2022-04-01-preview"
+                },
+                "uri": "[format('{0}/subscriptions/@{{parameters(''subscription_id'')}}/resourceGroups/@{{parameters(''easm_rg'')}}/providers/Microsoft.Easm/workspaces/@{{parameters(''easm_workspace'')}}/labels/@{{parameters(''easm_label'')}}', environment().resourceManager)]"
+              }
+            },
+            "Dedup_public_ips": {
+              "runAfter": {
+                "For_each_topology": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Compose",
+              "inputs": "@skip(reverse(union(variables('public_ips'), array('[]'))),1)"
+            },
+            "For_each_public_ip": {
+              "foreach": "@variables('public_ips')",
+              "actions": {
+                "Get_Asset_UUID": {
+                  "runAfter": {},
+                  "type": "Http",
+                  "inputs": {
+                    "authentication": {
+                      "audience": "https://easm.defender.microsoft.com/",
+                      "type": "ManagedServiceIdentity"
+                    },
+                    "method": "GET",
+                    "queries": {
+                      "api-version": "2023-05-01-preview"
+                    },
+                    "uri": "https://@{parameters('easm_location')}.easm.defender.microsoft.com/subscriptions/@{parameters('subscription_id')}/resourceGroups/@{parameters('easm_rg')}/workspaces/@{parameters('easm_workspace')}/assets/@{base64(concat('ipAddress$$',item()))}"
+                  }
+                },
+                "Update_Asset_State_and_Label": {
+                  "runAfter": {
+                    "Get_Asset_UUID": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "Http",
+                  "inputs": {
+                    "authentication": {
+                      "audience": "https://easm.defender.microsoft.com/",
+                      "type": "ManagedServiceIdentity"
+                    },
+                    "body": "@variables('update_body')",
+                    "headers": {
+                      "Content-Type": "application/json"
+                    },
+                    "method": "POST",
+                    "queries": {
+                      "api-version": "2023-05-01-preview",
+                      "filter": "@{concat('uuid = \"',body('Get_Asset_UUID')?['uuid'],'\"')}"
+                    },
+                    "uri": "https://@{parameters('easm_location')}.easm.defender.microsoft.com/subscriptions/@{parameters('subscription_id')}/resourceGroups/@{parameters('easm_rg')}/workspaces/@{parameters('easm_workspace')}/assets"
+                  }
+                }
+              },
+              "runAfter": {
+                "Set_update_body": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Foreach"
+            },
+            "For_each_topology": {
+              "foreach": "@body('List_Resource_Topologies')?['value']",
+              "actions": {
+                "For_each_resource": {
+                  "foreach": "@item()?['properties']?['topologyResources']",
+                  "actions": {
+                    "Is_InternetFacing": {
+                      "actions": {
+                        "For_each_InternetFacing": {
+                          "foreach": "@item()?['info']",
+                          "actions": {
+                            "Is_PublicIp": {
+                              "actions": {
+                                "Append_to_public_ips": {
+                                  "runAfter": {},
+                                  "type": "AppendToArrayVariable",
+                                  "inputs": {
+                                    "name": "public_ips",
+                                    "value": "@item()?['value']"
+                                  }
+                                }
+                              },
+                              "runAfter": {},
+                              "expression": {
+                                "and": [
+                                  {
+                                    "equals": [
+                                      "@item()?['name']",
+                                      "PublicIp"
+                                    ]
+                                  }
+                                ]
+                              },
+                              "type": "If"
+                            }
+                          },
+                          "runAfter": {},
+                          "type": "Foreach"
+                        }
+                      },
+                      "runAfter": {},
+                      "expression": {
+                        "and": [
+                          {
+                            "equals": [
+                              "@item()?['networkZones']",
+                              "InternetFacing"
+                            ]
+                          }
+                        ]
+                      },
+                      "type": "If"
+                    }
+                  },
+                  "runAfter": {},
+                  "type": "Foreach"
+                }
+              },
+              "runAfter": {
+                "List_Resource_Topologies": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Foreach",
+              "runtimeConfiguration": {
+                "concurrency": {
+                  "repetitions": 1
+                }
+              }
+            },
+            "Get_Workspace_Label": {
+              "runAfter": {
+                "Set_deduped_public_ips": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Http",
+              "inputs": {
+                "authentication": {
+                  "audience": "[environment().resourceManager]",
+                  "type": "ManagedServiceIdentity"
+                },
+                "headers": {
+                  "Authorization": ""
+                },
+                "method": "GET",
+                "queries": {
+                  "api-version": "2022-04-01-preview"
+                },
+                "uri": "[format('{0}/subscriptions/@{{parameters(''subscription_id'')}}/resourceGroups/@{{parameters(''easm_rg'')}}/providers/Microsoft.Easm/workspaces/@{{parameters(''easm_workspace'')}}/labels/@{{parameters(''easm_label'')}}', environment().resourceManager)]"
+              }
+            },
+            "Initialize_public_ips": {
+              "runAfter": {},
+              "type": "InitializeVariable",
+              "inputs": {
+                "variables": [
+                  {
+                    "name": "public_ips",
+                    "type": "array"
+                  }
+                ]
+              }
+            },
+            "Initialize_update_body": {
+              "runAfter": {
+                "Initialize_public_ips": [
+                  "Succeeded"
+                ]
+              },
+              "type": "InitializeVariable",
+              "inputs": {
+                "variables": [
+                  {
+                    "name": "update_body",
+                    "type": "object"
+                  }
+                ]
+              }
+            },
+            "List_Resource_Topologies": {
+              "runAfter": {
+                "Initialize_update_body": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Http",
+              "inputs": {
+                "authentication": {
+                  "type": "ManagedServiceIdentity"
+                },
+                "method": "GET",
+                "queries": {
+                  "api-version": "2020-01-01",
+                  "includeResourceInformation": "true"
+                },
+                "uri": "[format('{0}/subscriptions/@{{parameters(''subscription_id'')}}/providers/Microsoft.Security/topologies', environment().resourceManager)]"
+              }
+            },
+            "Set_deduped_public_ips": {
+              "runAfter": {
+                "Dedup_public_ips": [
+                  "Succeeded"
+                ]
+              },
+              "type": "SetVariable",
+              "inputs": {
+                "name": "public_ips",
+                "value": "@outputs('Dedup_public_ips')"
+              }
+            },
+            "Set_update_body": {
+              "runAfter": {
+                "Create_Label_if_not_exists": [
+                  "Succeeded",
+                  "Skipped"
+                ]
+              },
+              "type": "SetVariable",
+              "inputs": {
+                "name": "update_body",
+                "value": "@json(concat('{\"state\":\"',parameters('asset_state'),'\", \"labels\": {\"',parameters('easm_label'),'\": true}}'))"
+              }
+            }
+          },
+          "outputs": {}
+        },
+        "parameters": {}
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "resourceGroupRoleAssignmentContributor",
+      "resourceGroup": "[parameters('easmResourceGroup')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "principalId": {
+            "value": "[reference(resourceId('Microsoft.Logic/workflows', variables('logic_app_name')), '2017-07-01', 'full').identity.principalId]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.20.4.51522",
+              "templateHash": "9390924532540075680"
+            }
+          },
+          "parameters": {
+            "principalId": {
+              "type": "string"
+            }
+          },
+          "variables": {
+            "contributor_role": "b24988ac-6180-42a0-ab88-20f7382dd24c"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2020-10-01-preview",
+              "name": "[guid(resourceGroup().id, variables('contributor_role'))]",
+              "properties": {
+                "principalId": "[parameters('principalId')]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('contributor_role'))]",
+                "principalType": "ServicePrincipal"
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Logic/workflows', variables('logic_app_name'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "subscriptionRoleAssignmentReader",
+      "subscriptionId": "[subscription().subscriptionId]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "principalId": {
+            "value": "[reference(resourceId('Microsoft.Logic/workflows', variables('logic_app_name')), '2017-07-01', 'full').identity.principalId]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.20.4.51522",
+              "templateHash": "7779378497053989153"
+            }
+          },
+          "parameters": {
+            "principalId": {
+              "type": "string"
+            }
+          },
+          "variables": {
+            "reader_role": "acdd72a7-3385-48ef-bd42-f606fba81ae7"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2020-10-01-preview",
+              "name": "[guid(subscription().tenantId, subscription().id)]",
+              "properties": {
+                "principalId": "[parameters('principalId')]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('reader_role'))]",
+                "principalType": "ServicePrincipal"
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Logic/workflows', variables('logic_app_name'))]"
+      ]
+    }
+  ]
+}

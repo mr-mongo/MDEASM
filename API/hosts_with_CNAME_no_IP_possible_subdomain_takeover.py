@@ -34,8 +34,8 @@ for asset in easm.owned_domains.assets:
 #and only keep (print) those where the CNAME record does not end with a domain owned by the Org
 for cname,assetlist in easm.filters.cnames.items():
     if not cname[0].endswith(tuple(domain_list)):
-        print('CNAME record:', cname[0])
-        print('Assets with CNAME record:', ','.join(assetlist['assets']).replace('host$$',''))
+        print('CNAME record points to asset:', cname[0])
+        print('CNAME records:', ', '.join(assetlist['assets']).replace('host$$',''))
         #include an empty line after each result set just for a bit easier viewing of output
         print()
         #alternative printing if its preferred to keep the Asset Type indicator (host$$) with the asset name

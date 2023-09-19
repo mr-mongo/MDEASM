@@ -22,7 +22,7 @@ easm.get_workspace_assets(query_filter=hosts_with_cnames, asset_list_name='hosts
 #since we only care about the CNAME attribute and values, we can disable auto_create_facet_filters for all attributes in the above function, and instead explicitly create the CNAME facet filter
 easm.create_facet_filter(asset_list_name='hosts_with_cnames', attribute_name='cnames')
 
-#we don't need to create any facet filters for this either, as all we care about are the domain name values
+#we don't need to auto-create any facet filters for this either, as all we care about are the domain name values
 easm.get_workspace_assets(query_filter=owned_domains, asset_list_name='owned_domains', max_page_size=100, get_all=True, auto_create_facet_filters=False)
 
 #create the list of domain names

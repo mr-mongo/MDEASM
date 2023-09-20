@@ -338,7 +338,7 @@ resource MDEASM_GetAzurePublicIPs_LogicApp 'Microsoft.Logic/workflows@2017-07-01
         }
         List_Resource_Topologies: {
           runAfter: {
-            Initialize_update_body: [
+            Initialize_base64_asset: [
               'Succeeded'
             ]
           }

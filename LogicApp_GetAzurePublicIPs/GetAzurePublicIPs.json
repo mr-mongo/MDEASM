@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.21.1.54444",
-      "templateHash": "13510555324450652243"
+      "templateHash": "1710945068083988021"
     }
   },
   "parameters": {
@@ -357,7 +357,7 @@
             },
             "List_Resource_Topologies": {
               "runAfter": {
-                "Initialize_update_body": [
+                "Initialize_base64_asset": [
                   "Succeeded"
                 ]
               },

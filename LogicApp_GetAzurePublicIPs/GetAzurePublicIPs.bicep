@@ -57,6 +57,10 @@ resource MDEASM_GetAzurePublicIPs_LogicApp 'Microsoft.Logic/workflows@2017-07-01
       '$schema': 'https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#'
       contentVersion: '1.0.0.0'
       parameters: {
+        easm_workspace: {
+          defaultValue: easmWorkspace
+          type: 'String'
+        }
         asset_state: {
           defaultValue: asset_state_mapping[assetState]
           type: 'String'
@@ -71,10 +75,6 @@ resource MDEASM_GetAzurePublicIPs_LogicApp 'Microsoft.Logic/workflows@2017-07-01
         }
         easm_rg: {
           defaultValue: easmResourceGroup
-          type: 'String'
-        }
-        easm_workspace: {
-          defaultValue: easmWorkspace
           type: 'String'
         }
         subscription_id: {
@@ -142,7 +142,6 @@ resource MDEASM_GetAzurePublicIPs_LogicApp 'Microsoft.Logic/workflows@2017-07-01
           foreach: '@variables(\'public_ips\')'
           actions: {
             Get_Asset_UUID: {
-              runAfter: {}
               type: 'Http'
               inputs: {
                 authentication: {
@@ -153,8 +152,21 @@ resource MDEASM_GetAzurePublicIPs_LogicApp 'Microsoft.Logic/workflows@2017-07-01
                 queries: {
                   'api-version': '2023-05-01-preview'
                 }
-                uri: 'https://@{parameters(\'easm_location\')}.easm.defender.microsoft.com/subscriptions/@{parameters(\'subscription_id\')}/resourceGroups/@{parameters(\'easm_rg\')}/workspaces/@{parameters(\'easm_workspace\')}/assets/@{base64(concat(\'ipAddress$$\',item()))}'
+                uri: 'https://@{parameters(\'easm_location\')}.easm.defender.microsoft.com/subscriptions/@{parameters(\'subscription_id\')}/resourceGroups/@{parameters(\'easm_rg\')}/workspaces/@{parameters(\'easm_workspace\')}/assets/@{variables(\'base64_asset\')}'
               }
+              runAfter: {
+                Set_base64_asset: [
+                  'Succeeded'
+                ]
+              }
+            }
+            Set_base64_asset: {
+              inputs: {
+                name: 'base64_asset'
+                value: '@{base64(concat(\'ipAddress$$\',item()))}'
+              }
+              runAfter: {}
+              type: 'SetVariable'
             }
             Update_Asset_State_and_Label: {
               runAfter: {
@@ -278,6 +290,22 @@ resource MDEASM_GetAzurePublicIPs_LogicApp 'Microsoft.Logic/workflows@2017-07-01
               'api-version': '2022-04-01-preview'
             }
             uri: '${environment().resourceManager}/subscriptions/@{parameters(\'subscription_id\')}/resourceGroups/@{parameters(\'easm_rg\')}/providers/Microsoft.Easm/workspaces/@{parameters(\'easm_workspace\')}/labels/@{parameters(\'easm_label\')}'
+          }
+        }
+        Initialize_base64_asset: {
+          runAfter: {
+            Initialize_update_body: [
+              'Succeeded'
+            ]
+          }
+          type: 'InitializeVariable'
+          inputs: {
+            variables: [
+              {
+                name: 'base64_asset'
+                type: 'string'
+              }
+            ]
           }
         }
         Initialize_public_ips: {

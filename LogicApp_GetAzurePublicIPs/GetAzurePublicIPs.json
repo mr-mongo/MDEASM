@@ -4,14 +4,18 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.20.4.51522",
-      "templateHash": "3428953908807011382"
+      "version": "0.21.1.54444",
+      "templateHash": "13510555324450652243"
     }
   },
   "parameters": {
     "location": {
       "type": "string",
       "defaultValue": "[resourceGroup().location]"
+    },
+    "uniqueId": {
+      "type": "string",
+      "defaultValue": "[uniqueString(resourceGroup().id, utcNow())]"
     },
     "easmResourceGroup": {
       "type": "string",
@@ -72,6 +76,10 @@
           "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
           "contentVersion": "1.0.0.0",
           "parameters": {
+            "easm_workspace": {
+              "defaultValue": "[parameters('easmWorkspace')]",
+              "type": "String"
+            },
             "asset_state": {
               "defaultValue": "[variables('asset_state_mapping')[parameters('assetState')]]",
               "type": "String"
@@ -86,10 +94,6 @@
             },
             "easm_rg": {
               "defaultValue": "[parameters('easmResourceGroup')]",
-              "type": "String"
-            },
-            "easm_workspace": {
-              "defaultValue": "[parameters('easmWorkspace')]",
               "type": "String"
             },
             "subscription_id": {
@@ -157,7 +161,6 @@
               "foreach": "@variables('public_ips')",
               "actions": {
                 "Get_Asset_UUID": {
-                  "runAfter": {},
                   "type": "Http",
                   "inputs": {
                     "authentication": {
@@ -168,8 +171,21 @@
                     "queries": {
                       "api-version": "2023-05-01-preview"
                     },
-                    "uri": "https://@{parameters('easm_location')}.easm.defender.microsoft.com/subscriptions/@{parameters('subscription_id')}/resourceGroups/@{parameters('easm_rg')}/workspaces/@{parameters('easm_workspace')}/assets/@{base64(concat('ipAddress$$',item()))}"
+                    "uri": "https://@{parameters('easm_location')}.easm.defender.microsoft.com/subscriptions/@{parameters('subscription_id')}/resourceGroups/@{parameters('easm_rg')}/workspaces/@{parameters('easm_workspace')}/assets/@{variables('base64_asset')}"
+                  },
+                  "runAfter": {
+                    "Set_base64_asset": [
+                      "Succeeded"
+                    ]
                   }
+                },
+                "Set_base64_asset": {
+                  "inputs": {
+                    "name": "base64_asset",
+                    "value": "@{base64(concat('ipAddress$$',item()))}"
+                  },
+                  "runAfter": {},
+                  "type": "SetVariable"
                 },
                 "Update_Asset_State_and_Label": {
                   "runAfter": {
@@ -295,6 +311,22 @@
                 "uri": "[format('{0}/subscriptions/@{{parameters(''subscription_id'')}}/resourceGroups/@{{parameters(''easm_rg'')}}/providers/Microsoft.Easm/workspaces/@{{parameters(''easm_workspace'')}}/labels/@{{parameters(''easm_label'')}}', environment().resourceManager)]"
               }
             },
+            "Initialize_base64_asset": {
+              "runAfter": {
+                "Initialize_update_body": [
+                  "Succeeded"
+                ]
+              },
+              "type": "InitializeVariable",
+              "inputs": {
+                "variables": [
+                  {
+                    "name": "base64_asset",
+                    "type": "string"
+                  }
+                ]
+              }
+            },
             "Initialize_public_ips": {
               "runAfter": {},
               "type": "InitializeVariable",
@@ -394,8 +426,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.20.4.51522",
-              "templateHash": "9390924532540075680"
+              "version": "0.21.1.54444",
+              "templateHash": "2754963160426648503"
             }
           },
           "parameters": {
@@ -446,8 +478,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.20.4.51522",
-              "templateHash": "7779378497053989153"
+              "version": "0.21.1.54444",
+              "templateHash": "14232089539524690386"
             }
           },
           "parameters": {

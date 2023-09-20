@@ -13,4 +13,4 @@ This first run **will fail** due to the role assignments not having enough time 
 
 The `Deploy to Azure` button below will only use the ARM template and parameters JSON file. These were generated from a Bicep template, which is included here for reference.
 
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmr-mongo%2FMDEASM%2Fmain%2FLogicApp%2FGetAzurePublicIPs.json)
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmr-mongo%2FMDEASM%2Fmain%2FLogicApp_GetAzurePublicIPs%2FGetAzurePublicIPs.json)

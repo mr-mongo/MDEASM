@@ -460,7 +460,7 @@ class Workspaces:
             token = self._dp_token
         else:
             if self.__token_expiry__(self._cp_token):
-                self._dp_token = self.__bearer_token__()
+                self._cp_token = self.__bearer_token__()
             token = self._cp_token
         if url:
             helper_url = f"{url}/{urllib.parse.quote(endpoint)}"
